@@ -4,8 +4,9 @@
 
 import re
 
-from pymatgen.core.structure import Molecule
+from pymatgen.core.structure import Molecule, Structure
 from monty.io import zopen
+
 
 """
 Module implementing an XYZ file object class.
@@ -136,3 +137,26 @@ class XYZ:
         """
         with zopen(filename, "wt") as f:
             f.write(self.__str__())
+
+
+
+class EXYZ(XYZ):
+    """
+    Basic class for importing and exporting Structures in extended XYZ
+    format described at https://libatoms.github.io/QUIP/io.html#extendedxyz.
+
+    Args:
+        structure: Input structure or list of structures
+
+    .. note::
+        Exporting periodic structures in the XYZ format will lose information
+        about the periodicity. Essentially, only cartesian coordinates are
+        written in this format and no information is retained about the
+        lattice.
+    """
+    def __init__(
+        self,
+        structure: Structure,
+        coord_precision: int = 6
+    ) -> None:
+        pass
