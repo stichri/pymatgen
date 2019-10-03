@@ -6,6 +6,7 @@ import re
 
 from pymatgen.core.structure import Molecule, Structure
 from monty.io import zopen
+from typing import Dict, List, Union
 
 
 """
@@ -142,21 +143,33 @@ class XYZ:
 
 class EXYZ(XYZ):
     """
-    Basic class for importing and exporting Structures in extended XYZ
-    format described at https://libatoms.github.io/QUIP/io.html#extendedxyz.
+    Basic class for importing and exporting structures or molecules in extended XYZ
+    format as described at https://libatoms.github.io/QUIP/io.html#extendedxyz.
 
     Args:
-        structure: Input structure or list of structures
+        structure: Input structure/molecule or list of structures/molecules
 
     .. note::
-        Exporting periodic structures in the XYZ format will lose information
-        about the periodicity. Essentially, only cartesian coordinates are
-        written in this format and no information is retained about the
-        lattice.
+        While exporting periodic structures in the XYZ format will lose information
+        about the periodicity, the extended XYZ format does retain such information.
+        Moreover, arbitrary metadata is retained and encoded in terms of bools
+        (T or F), integer numbers, floats or strings (delimited by quotation marks
+        when including whitespaces) on a per-site or per-structure/molecule basis.
     """
     def __init__(
-        self,
-        structure: Structure,
-        coord_precision: int = 6
+            self,
+            mol: Union[Structure, List[Structure], Molecule, List[Molecule]],
+            mol_props: Union[Dict, List[Dict]] = None,
+            coord_precision: int = 6
     ) -> None:
-        pass
+        XYZ.__init__(
+            self,
+            mol,
+            coord_precision=coord_precision
+        )
+        if isinstance(mol_props, list):
+            self._mols_props = mol_props.copy()
+        elif mol_props:
+            self._mols_props = [mol_props.copy()]
+        else:
+            self._mols_props = mol_props
