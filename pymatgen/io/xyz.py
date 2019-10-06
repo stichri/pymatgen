@@ -6,12 +6,12 @@ import re
 
 from typing import Dict, List, Union, Optional
 from monty.io import zopen
-from pymatgen.core.structure import IMolecule, IStructure, Molecule, Structure
-from copy import copy
+from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
+from collections import OrderedDict
 
 
 """
-Module implementing an XYZ file object class.
+Module implementing an (extended) XYZ file object class.
 """
 
 __author__ = "Shyue Ping Ong"
@@ -155,7 +155,7 @@ class EXYZ(XYZ):
         about the periodicity, the extended XYZ format does retain such information.
         Moreover, arbitrary metadata is retained and encoded in terms of bools
         (T or F), integer numbers, floats or strings (delimited by quotation marks
-        when including whitespaces) on a per-site or per-structure/molecule basis.
+        when including whitespaces) on a per-site and per-structure/molecule basis.
     """
     def __init__(
             self,
@@ -173,10 +173,43 @@ class EXYZ(XYZ):
             self._mols_props = [mol_props]
         else:
             self._mols_props = None
-
+        
         if self._mols_props and (len(self._mols_props) != len(self._mols)):
             raise ValueError(
                 "not as many dicts ({}) as structures/molecules ({})".format(
                     len(self._mols_props), len(self._mols)
                 )
             )
+    
+    def _lattice2prop(
+        self,
+        lat: Lattice
+    ) -> str:
+        fmt = "{{:.{}f}}".format(self.coord_precision)
+        return '"' + ' '.join(fmt.format(x) for x in lat.matrix.flat) + '"'
+
+    def _frame_str(
+        self,
+        mol: Union[IMolecule, IStructure],
+        props: Dict
+    ) -> str:
+        prop_line_dict = OrderedDict()
+        
+        if not mol.lattice:
+            lat = Lattice.cubic(2.*mol.distance_matrix.max())
+            center = lat.get_cartesian_coords([.5,.5,.5])
+            mol = IStructure(
+                lat,
+                [s.specie for s in mol],
+                [s.coords - mol.center_of_mass + center for s in mol],
+                coords_are_cartesian = True
+            )
+        prop_line_dict["Lattice"] = self._lattice2prop(mol.lattice)
+
+
+        
+    
+    def __str__(self):
+        return "\n".join(
+            [self._frame_str(m,p) for (m,p) in zip(self._mols, self._mols_props)]
+        )
