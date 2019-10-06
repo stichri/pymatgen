@@ -4,9 +4,10 @@
 
 import re
 
-from pymatgen.core.structure import Molecule, Structure
+from typing import Dict, List, Union, Optional
 from monty.io import zopen
-from typing import Dict, List, Union
+from pymatgen.core.structure import IMolecule, IStructure, Molecule, Structure
+from copy import copy
 
 
 """
@@ -158,18 +159,24 @@ class EXYZ(XYZ):
     """
     def __init__(
             self,
-            mol: Union[Structure, List[Structure], Molecule, List[Molecule]],
-            mol_props: Union[Dict, List[Dict]] = None,
+            mol: Union[IStructure, List[IStructure], IMolecule, List[IMolecule]],
+            mol_props: Optional[Union[Dict, List[Dict]]] = None,
             coord_precision: int = 6
     ) -> None:
-        XYZ.__init__(
-            self,
+        super().__init__(
             mol,
             coord_precision=coord_precision
         )
         if isinstance(mol_props, list):
-            self._mols_props = mol_props.copy()
-        elif mol_props:
-            self._mols_props = [mol_props.copy()]
-        else:
             self._mols_props = mol_props
+        elif mol_props is not None:
+            self._mols_props = [mol_props]
+        else:
+            self._mols_props = None
+
+        if self._mols_props and (len(self._mols_props) != len(self._mols)):
+            raise ValueError(
+                "not as many dicts ({}) as structures/molecules ({})".format(
+                    len(self._mols_props), len(self._mols)
+                )
+            )
