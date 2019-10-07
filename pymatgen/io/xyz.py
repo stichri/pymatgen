@@ -4,7 +4,7 @@
 
 import re
 
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Hashable
 from monty.io import zopen
 from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
 from collections import OrderedDict
@@ -157,6 +157,27 @@ class EXYZ(XYZ):
         (T or F), integer numbers, floats or strings (delimited by quotation marks
         when including whitespaces) on a per-site and per-structure/molecule basis.
     """
+
+    _quotes = "\"'`´"
+    _whites_etc = r"\t\n\r\f\v"
+    _delims = "=:"
+    _frameval_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + r"]+"
+    _framekey_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + " " + r"]+"
+    _colkey_sanitize_regex = r"[" + _whites_etc + " " + _delims + r"]+"
+
+    _type_lookup = {
+        "L" : bool, "l" : bool,
+        "I" : int, "i" : int,
+        "R" : float, "r" : float,
+        "S" : str, "s" : str
+    }
+    _code_lookup = {
+        bool : "L",
+        int : "I",
+        float : "R",
+        str : "S"
+    }
+
     def __init__(
             self,
             mol: Union[IStructure, List[IStructure], IMolecule, List[IMolecule]],
@@ -167,34 +188,78 @@ class EXYZ(XYZ):
             mol,
             coord_precision=coord_precision
         )
+
+        self._fmt_float = "{{:.{}f}}".format(self.precision)
+
         if isinstance(mol_props, list):
             self._mols_props = mol_props
         elif mol_props is not None:
             self._mols_props = [mol_props]
         else:
-            self._mols_props = None
-        
-        if self._mols_props and (len(self._mols_props) != len(self._mols)):
+            self._mols_props = [None for m in self._mols]
+
+        if len(self._mols_props) != len(self._mols):
             raise ValueError(
                 "not as many dicts ({}) as structures/molecules ({})".format(
                     len(self._mols_props), len(self._mols)
                 )
             )
-    
-    def _lattice2prop(
-        self,
-        lat: Lattice
+
+    def _lattice_to_prop(
+            self,
+            lat: Lattice
     ) -> str:
-        fmt = "{{:.{}f}}".format(self.coord_precision)
-        return '"' + ' '.join(fmt.format(x) for x in lat.matrix.flat) + '"'
+        return '"' + ' '.join(self._fmt_float.format(x) for x in lat.matrix.flat) + '"'
+
+    def _val_to_frameval(
+            self,
+            val: Union[bool, int, float, str]
+    ) -> str:
+        if isinstance(val, bool):
+            str_result = "T" if val else "F"
+        elif isinstance(val, int):
+            str_result = str(val)
+        elif isinstance(val, float):
+            str_result = self._fmt_float.format(val)
+        else:
+            str_result = re.sub(self._frameval_sanitize_regex, "", str(val))
+            if re.search(r"[ ]+", str_result) is not None:
+                str_result = '"' + str_result + '"'
+        return str_result
+
+    def _val_to_framekey(
+            self,
+            val: Union[bool, int, float, str]
+    ) -> str:
+        frameprop = re.sub(self._framekey_sanitize_regex, "", str(val))
+        return frameprop
+
+    def _val_to_colkey(
+            self,
+            val: Hashable
+    ) -> str:
+        return re.sub(self._colkey_sanitize_regex, "", val)
+
+    def _get_properties_tag(
+            self,
+            props: Dict = None
+    ) -> str:
+        props_tag: str = "species:S:1:pos:R:3"
+
+        if props:
+            for (k, v) in props.items():
+                props_tag += ":" + self._val_to_colkey(k)
+
+        return props_tag
 
     def _frame_str(
-        self,
-        mol: Union[IMolecule, IStructure],
-        props: Dict
+            self,
+            mol: Union[IMolecule, IStructure],
+            props: Dict = None
     ) -> str:
+        output = [str(mol.num_sites)]
+
         prop_line_dict = OrderedDict()
-        
         if not mol.lattice:
             lat = Lattice.cubic(2.*mol.distance_matrix.max())
             center = lat.get_cartesian_coords([.5,.5,.5])
@@ -202,13 +267,22 @@ class EXYZ(XYZ):
                 lat,
                 [s.specie for s in mol],
                 [s.coords - mol.center_of_mass + center for s in mol],
-                coords_are_cartesian = True
+                coords_are_cartesian=True,
+                site_properties=mol.site_properties
             )
-        prop_line_dict["Lattice"] = self._lattice2prop(mol.lattice)
+        prop_line_dict["Lattice"] = self._lattice_to_prop(mol.lattice)
+        prop_line_dict["Properties"] = self._get_properties_tag(props)
 
+        if mol.site_properties:
+            for (key, val) in mol.site_properties.items():
+                if key not in prop_line_dict.keys():
+                    prop_line_dict[self._val_to_framekey(key)] = self._val_to_frameval(val)
+        output.append(
+            " ".join("{}={}".format(k, v) for (k, v) in prop_line_dict.items())
+        )
 
-        
-    
+        return "\n".join(output)
+
     def __str__(self):
         return "\n".join(
             [self._frame_str(m,p) for (m,p) in zip(self._mols, self._mols_props)]
