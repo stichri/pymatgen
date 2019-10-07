@@ -28,3 +28,4 @@ gulptmp_4_1
 .coverage
 .mypy_cache
 .vscode
+testexyz.py

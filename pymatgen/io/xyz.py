@@ -271,10 +271,10 @@ class EXYZ(XYZ):
                 site_properties=mol.site_properties
             )
         prop_line_dict["Lattice"] = self._lattice_to_prop(mol.lattice)
-        prop_line_dict["Properties"] = self._get_properties_tag(props)
+        prop_line_dict["Properties"] = self._get_properties_tag(mol.site_properties)
 
-        if mol.site_properties:
-            for (key, val) in mol.site_properties.items():
+        if props:
+            for (key, val) in props.items():
                 if key not in prop_line_dict.keys():
                     prop_line_dict[self._val_to_framekey(key)] = self._val_to_frameval(val)
         output.append(
