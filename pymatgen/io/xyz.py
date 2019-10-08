@@ -3,11 +3,13 @@
 # Distributed under the terms of the MIT License.
 
 import re
+import numpy as np
 
-from typing import Dict, List, Union, Optional, Hashable
+from typing import Dict, List, Tuple, Union, Optional, Hashable
 from monty.io import zopen
 from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
+
 
 
 """
@@ -164,19 +166,22 @@ class EXYZ(XYZ):
     _frameval_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + r"]+"
     _framekey_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + " " + r"]+"
     _colkey_sanitize_regex = r"[" + _whites_etc + " " + _delims + r"]+"
+    _coldata_sanizize_regex = r"[" + " " + _whites_etc + _delims +  r"]+"
 
-    _type_lookup = {
+    _code2type = {
         "L" : bool, "l" : bool,
         "I" : int, "i" : int,
         "R" : float, "r" : float,
         "S" : str, "s" : str
     }
-    _code_lookup = {
+    _type2code = {
         bool : "L",
-        int : "I",
-        float : "R",
-        str : "S"
+        int : "I", np.integer : "I",
+        float : "R", np.floating : "R",
+        str : "S", list : "S", tuple : "S", np.ndarray : "S"
     }
+
+    DataField = namedtuple("DataField", ["code", "count", "data"])
 
     def __init__(
             self,
@@ -240,17 +245,86 @@ class EXYZ(XYZ):
     ) -> str:
         return re.sub(self._colkey_sanitize_regex, "", val)
 
-    def _get_properties_tag(
-            self,
-            props: Dict = None
+    def _val_to_col_type(
+        self,
+        val: Union[List, Tuple, np.ndarray, int, float, str],
+        check_list = True
     ) -> str:
+        if isinstance(val, (list, tuple, np.ndarray)) and check_list:
+            return self._val_to_col_type(val[0], check_list = False)
+        elif type(val) == bool:
+            return self._type2code[str]
+        else:
+            return self._type2code[type(val)]
+
+    def _val_to_col_desc(
+            self,
+            val: Union[List, Tuple, int, float, str]
+    ) -> (str, int):
+        if isinstance(val, (list, tuple, np.ndarray)):
+            count = len(val)
+        else:
+            count = 1
+        return self._val_to_col_type(val), count
+
+    def _prop_to_fields(
+            self,
+            prop: Union[List, Tuple]
+    ) -> (str, int, DataField):
+        code, count = self._val_to_col_desc(prop[0])
+        fields = [EXYZ.DataField(code, count, prop[0])]
+        for p in prop[1:]:
+            cd, cnt = self._val_to_col_desc(p)
+            if (cd, cnt) == (code, count):
+                fields.append(EXYZ.DataField(cd, cnt, p))
+            else:
+                raise ValueError("incommensurate types/shapes in properties!")
+        return code, count, fields
+
+    def _prop_tag_and_data_fields(
+            self,
+            mol: Union[IMolecule, IStructure]
+    ) -> (str, OrderedDict):
         props_tag: str = "species:S:1:pos:R:3"
+        props_data_fields = OrderedDict()
+        props_data_fields["species"] = [EXYZ.DataField("S", 1, s.specie) for s in mol]
+        props_data_fields["pos"] = [EXYZ.DataField("R", 3, s.coords) for s in mol]
+        if mol.site_properties:
+            for (key, val) in mol.site_properties.items():
+                col_key = self._val_to_colkey(key)
+                code, count, fields = self._prop_to_fields(val)
+                props_tag += ":" + col_key + ":" + code + ":" + str(count)
+                props_data_fields[col_key] = fields
 
-        if props:
-            for (k, v) in props.items():
-                props_tag += ":" + self._val_to_colkey(k)
+        return props_tag, props_data_fields
 
-        return props_tag
+    def _val_to_col_str(
+            self,
+            code: str,
+            val: Union[int, float, str]
+    ) -> str:
+        if code in "Rr":
+            return self._fmt_float.format(self._code2type[code](val))
+        else:
+            return "{}".format(
+                re.sub(self._coldata_sanizize_regex, "", str(self._code2type[code](val)))
+            )
+
+    def _data_fields_to_strs(
+            self,
+            data: OrderedDict
+    ) -> List[str]:
+        strs = []
+        for line in zip(*data.values()):
+            line_strs = []
+            for field in line:
+                if field.count == 1:
+                    line_strs.append(self._val_to_col_str(field.code, field.data))
+                else:
+                    for val in field.data:
+                        line_strs.append(self._val_to_col_str(field.code, val))
+            strs.append(" ".join([field_str for field_str in line_strs]))
+        return strs
 
     def _frame_str(
             self,
@@ -271,7 +345,7 @@ class EXYZ(XYZ):
                 site_properties=mol.site_properties
             )
         prop_line_dict["Lattice"] = self._lattice_to_prop(mol.lattice)
-        prop_line_dict["Properties"] = self._get_properties_tag(mol.site_properties)
+        prop_line_dict["Properties"], data = self._prop_tag_and_data_fields(mol)
 
         if props:
             for (key, val) in props.items():
@@ -280,6 +354,7 @@ class EXYZ(XYZ):
         output.append(
             " ".join("{}={}".format(k, v) for (k, v) in prop_line_dict.items())
         )
+        output.extend(self._data_fields_to_strs(data))
 
         return "\n".join(output)
 
