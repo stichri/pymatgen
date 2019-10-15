@@ -2,15 +2,14 @@
 # Copyright (c) Pymatgen Development Team.
 # Distributed under the terms of the MIT License.
 
-import re
-import numpy as np
-
 from typing import Dict, List, Tuple, Union, Optional, Hashable, Any
-from monty.io import zopen
-from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
 from collections import OrderedDict, namedtuple
 from operator import add
+from monty.io import zopen
+from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
 
+import re
+import numpy as np
 
 
 """
@@ -84,8 +83,8 @@ class XYZ:
                 coords.append([float(val) for val in xyz])
         return Molecule(sp, coords)
 
-    @classmethod
-    def from_string(cls, contents):
+    @staticmethod
+    def from_string(contents):
         """
         Creates XYZ object from a string.
 
@@ -106,7 +105,7 @@ class XYZ:
         mols = []
         for xyz_match in pat.finditer(contents):
             xyz_text = xyz_match.group(0)
-            mols.append(cls._from_frame_string(xyz_text))
+            mols.append(XYZ._from_frame_string(xyz_text))
         return XYZ(mols)
 
     @classmethod
@@ -174,7 +173,6 @@ class EXYZ(XYZ):
 
     _quotes = r"\"'`´"
     _whites_etc = r"\t\n\r\f\v"
-    _delims = r"=:"
 
     _site_prop_key_sanitize_match = "[" + _whites_etc + _quotes + ":" + "]+"
     _site_prop_val_sanitize_match = "[" + _whites_etc + _quotes + "]+"
@@ -210,6 +208,40 @@ class EXYZ(XYZ):
                     len(self._mols)
                 )
             )
+
+    @staticmethod
+    def _mol_and_props_from_lines(
+            line_comment: str,
+            lines_sites: List[str]
+    ) -> (IStructure, Dict):
+        pass
+        return None, None
+        
+
+    @staticmethod
+    def from_string(
+            string: str
+    ) -> "EXYZ": # python <=3.7 can't annotate types not defined before, python >=4.0 will ...
+        string = string + "\n" if string[-1] == "\n" else string
+
+        mols = []
+        mols_props = []
+        lines = iter(string.split("\n"))
+        for line in lines:
+            try:
+                num_sites = int(line.split()[0])
+            except ValueError as ve:
+                raise Exception(str(ve) + " for frame {}".format(len(mols)+1)) from ve
+            try:
+                mol, props = EXYZ._mol_and_props_from_lines(
+                    line_comment=next(lines),
+                    lines_sites=[next(lines) for n in range(num_sites)]
+                )
+                mols.append(mol)
+                mols_props.append(props)
+            except StopIteration:
+                raise RuntimeError("lines unexpectedly exhausted while parsing exyz-file")
+        return EXYZ(mols, props)
 
     def _site_prop_key(
             self,
