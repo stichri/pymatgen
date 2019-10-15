@@ -5,10 +5,11 @@
 import re
 import numpy as np
 
-from typing import Dict, List, Tuple, Union, Optional, Hashable
+from typing import Dict, List, Tuple, Union, Optional, Hashable, Any
 from monty.io import zopen
 from pymatgen import IMolecule, IStructure, Molecule, Structure, Lattice
 from collections import OrderedDict, namedtuple
+from operator import add
 
 
 
@@ -83,8 +84,8 @@ class XYZ:
                 coords.append([float(val) for val in xyz])
         return Molecule(sp, coords)
 
-    @staticmethod
-    def from_string(contents):
+    @classmethod
+    def from_string(cls, contents):
         """
         Creates XYZ object from a string.
 
@@ -105,11 +106,11 @@ class XYZ:
         mols = []
         for xyz_match in pat.finditer(contents):
             xyz_text = xyz_match.group(0)
-            mols.append(XYZ._from_frame_string(xyz_text))
+            mols.append(cls._from_frame_string(xyz_text))
         return XYZ(mols)
 
-    @staticmethod
-    def from_file(filename):
+    @classmethod
+    def from_file(cls, filename):
         """
         Creates XYZ object from a file.
 
@@ -120,7 +121,7 @@ class XYZ:
             XYZ object
         """
         with zopen(filename) as f:
-            return XYZ.from_string(f.read())
+            return cls.from_string(f.read())
 
     def _frame_str(self, frame_mol):
         output = [str(len(frame_mol)), frame_mol.composition.formula]
@@ -142,31 +143,21 @@ class XYZ:
         with zopen(filename, "wt") as f:
             f.write(self.__str__())
 
-
-
 class EXYZ(XYZ):
     """
-    Basic class for importing and exporting structures or molecules in extended XYZ
+    Basic class for importing and exporting structure or molecules in the extended XYZ
     format as described at https://libatoms.github.io/QUIP/io.html#extendedxyz.
 
     Args:
-        structure: Input structure/molecule or list of structures/molecules
+        structure: Input (list of) structure(s) or molecule(s)
 
     .. note::
         While exporting periodic structures in the XYZ format will lose information
-        about the periodicity, the extended XYZ format does retain such information.
+        about periodicity, the extended XYZ format does retain such information.
         Moreover, arbitrary metadata is retained and encoded in terms of bools
         (T or F), integer numbers, floats or strings (delimited by quotation marks
         when including whitespaces) on a per-site and per-structure/molecule basis.
     """
-
-    _quotes = "\"'`´"
-    _whites_etc = r"\t\n\r\f\v"
-    _delims = "=:"
-    _frameval_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + r"]+"
-    _framekey_sanitize_regex = r"[" + _quotes + _whites_etc + "=" + " " + r"]+"
-    _colkey_sanitize_regex = r"[" + _whites_etc + " " + _delims + r"]+"
-    _coldata_sanizize_regex = r"[" + " " + _whites_etc + _delims +  r"]+"
 
     _code2type = {
         "L" : bool, "l" : bool,
@@ -176,164 +167,224 @@ class EXYZ(XYZ):
     }
     _type2code = {
         bool : "L",
-        int : "I", np.integer : "I",
-        float : "R", np.floating : "R",
+        int : "I", np.int : "I", np.int64 : "I", np.int32 : "I", np.int16 : "I", np.int8 : "I",
+        float : "R", np.float : "R", np.float128 : "R", np.float64 : "R", np.float16 : "R",
         str : "S", list : "S", tuple : "S", np.ndarray : "S"
     }
 
-    DataField = namedtuple("DataField", ["code", "count", "data"])
+    _quotes = r"\"'`´"
+    _whites_etc = r"\t\n\r\f\v"
+    _delims = r"=:"
+
+    _site_prop_key_sanitize_match = "[" + _whites_etc + _quotes + ":" + "]+"
+    _site_prop_val_sanitize_match = "[" + _whites_etc + _quotes + "]+"
+    _frame_prop_key_sanitize_match = "[" + " " + _whites_etc + _quotes + "=" + "]+"
+    _frame_prop_val_sanitize_match = "[" + _whites_etc + _quotes + "=" + "]+"
+
+    EXYZData = namedtuple("EXYZData", ["code", "data", "widths"])
 
     def __init__(
             self,
             mol: Union[IStructure, List[IStructure], IMolecule, List[IMolecule]],
-            mol_props: Optional[Union[Dict, List[Dict]]] = None,
-            coord_precision: int = 6
+            mol_props: Union[Dict, List[Dict], Tuple[Dict]] = None,
+            float_precision : int = 6
     ) -> None:
         super().__init__(
             mol,
-            coord_precision=coord_precision
+            coord_precision=float_precision
         )
 
         self._fmt_float = "{{:.{}f}}".format(self.precision)
 
-        if isinstance(mol_props, list):
+        if isinstance(mol_props, (List, Tuple)):
             self._mols_props = mol_props
         elif mol_props is not None:
             self._mols_props = [mol_props]
         else:
             self._mols_props = [None for m in self._mols]
 
-        if len(self._mols_props) != len(self._mols):
+        if not len(self._mols_props) == len(self._mols):
             raise ValueError(
-                "not as many dicts ({}) as structures/molecules ({})".format(
-                    len(self._mols_props), len(self._mols)
+                "not as many molecule property sets ({}) as molecules ({})".format(
+                    len(self._mols_props),
+                    len(self._mols)
                 )
             )
 
-    def _lattice_to_prop(
+    def _site_prop_key(
             self,
-            lat: Lattice
+            k: str
     ) -> str:
-        return '"' + ' '.join(self._fmt_float.format(x) for x in lat.matrix.flat) + '"'
+        key = re.sub(self._site_prop_key_sanitize_match, "", str(k))
+        return key
 
-    def _val_to_frameval(
+    def _site_prop_val(
             self,
-            val: Union[bool, int, float, str]
+            v: str
     ) -> str:
-        if isinstance(val, bool):
-            str_result = "T" if val else "F"
-        elif isinstance(val, int):
-            str_result = str(val)
-        elif isinstance(val, float):
-            str_result = self._fmt_float.format(val)
-        else:
-            str_result = re.sub(self._frameval_sanitize_regex, "", str(val))
-            if re.search(r"[ ]+", str_result) is not None:
-                str_result = '"' + str_result + '"'
-        return str_result
+        val = re.sub(self._site_prop_val_sanitize_match, "", str(v))
+        if re.search("[ ]+", val):
+            val = '"' + val + '"'
+        return val
 
-    def _val_to_framekey(
+    def _code(
             self,
-            val: Union[bool, int, float, str]
+            val: Any
     ) -> str:
-        frameprop = re.sub(self._framekey_sanitize_regex, "", str(val))
-        return frameprop
-
-    def _val_to_colkey(
-            self,
-            val: Hashable
-    ) -> str:
-        return re.sub(self._colkey_sanitize_regex, "", val)
-
-    def _val_to_col_type(
-        self,
-        val: Union[List, Tuple, np.ndarray, int, float, str],
-        check_list = True
-    ) -> str:
-        if isinstance(val, (list, tuple, np.ndarray)) and check_list:
-            return self._val_to_col_type(val[0], check_list = False)
-        elif type(val) == bool:
-            return self._type2code[str]
-        else:
-            return self._type2code[type(val)]
-
-    def _val_to_col_desc(
-            self,
-            val: Union[List, Tuple, int, float, str]
-    ) -> (str, int):
-        if isinstance(val, (list, tuple, np.ndarray)):
-            count = len(val)
-        else:
-            count = 1
-        return self._val_to_col_type(val), count
-
-    def _prop_to_fields(
-            self,
-            prop: Union[List, Tuple]
-    ) -> (str, int, DataField):
-        code, count = self._val_to_col_desc(prop[0])
-        fields = [EXYZ.DataField(code, count, prop[0])]
-        for p in prop[1:]:
-            cd, cnt = self._val_to_col_desc(p)
-            if (cd, cnt) == (code, count):
-                fields.append(EXYZ.DataField(cd, cnt, p))
-            else:
-                raise ValueError("incommensurate types/shapes in properties!")
-        return code, count, fields
-
-    def _prop_tag_and_data_fields(
-            self,
-            mol: Union[IMolecule, IStructure]
-    ) -> (str, OrderedDict):
-        props_tag: str = "species:S:1:pos:R:3"
-        props_data_fields = OrderedDict()
-        props_data_fields["species"] = [EXYZ.DataField("S", 1, s.specie) for s in mol]
-        props_data_fields["pos"] = [EXYZ.DataField("R", 3, s.coords) for s in mol]
-        if mol.site_properties:
-            for (key, val) in mol.site_properties.items():
-                col_key = self._val_to_colkey(key)
-                code, count, fields = self._prop_to_fields(val)
-                props_tag += ":" + col_key + ":" + code + ":" + str(count)
-                props_data_fields[col_key] = fields
-
-        return props_tag, props_data_fields
-
-    def _val_to_col_str(
-            self,
-            code: str,
-            val: Union[int, float, str]
-    ) -> str:
-        if code in "Rr":
-            return self._fmt_float.format(self._code2type[code](val))
-        else:
-            return "{}".format(
-                re.sub(self._coldata_sanizize_regex, "", str(self._code2type[code](val)))
+        try:
+            code = self._type2code[type(val)]
+        except KeyError:
+            raise ValueError(
+                "Unable to map {} ({}), use appropriate string representation".format(type(val), val)
             )
+        return code
 
-    def _data_fields_to_strs(
+    def _val2coldata(
+            self,
+            val: Union[List, Tuple, np.ndarray, Any],
+            probe_seq=True
+    ) -> (str, List[str], List[int]):
+        if probe_seq and isinstance(val, (list, tuple, np.ndarray)):
+            codes = [self._code(v) for v in val]
+            if not len(set(codes)) == 1:
+                raise TypeError("Inconcistent types in data field")
+            code = codes[0]
+            data_str = [self._site_prop_val(*self._val2coldata(v, probe_seq=False)[1]) for v in val]
+            widths = [len(d) for d in data_str]
+        else:
+            code = self._code(val)
+            if code == "R":
+                data_str = self._fmt_float.format(val)
+            elif code == "L":
+                data_str = "T" if val else "F"
+            else:
+                data_str = str(val)
+            data_str = [self._site_prop_val(data_str)]
+            widths = [len(data_str[0])]
+        return code, data_str, widths
+
+    def _site_data_columns(
+            self,
+            data_col: List
+    ) -> EXYZData:
+        code0 = None
+        data_str0 = []
+        widths0 = None
+        for d in data_col:
+            code, data_str, widths = self._val2coldata(d)
+            if not code0:
+                code0 = code
+            if not widths0:
+                widths0 = widths
+            if not code0 == code:
+                raise TypeError("Inconsistent types in data column")
+            if not len(widths0) == len(widths):
+                raise ValueError("Inconsistent lengths in data column")
+            data_str0.append(data_str)
+            widths = tuple(max(w, w0) for w, w0 in zip(widths, widths0))
+            widths0 = widths
+        return EXYZ.EXYZData(code=code, data=data_str0, widths=widths)
+
+
+    def _site_prop_keys_and_data(
+            self,
+            mol: IStructure,
+            data: OrderedDict
+    ) -> str:
+        props_str = "species"
+        data["species"] = self._site_data_columns([str(site.specie) for site in mol])
+        props_str += ":" + data["species"].code + ":" + str(len(data["species"].widths))
+
+        props_str += ":" + "pos"
+        data["pos"] = self._site_data_columns([site.coords for site in mol])
+        props_str += ":" + data["pos"].code + ":" + str(len(data["pos"].widths))
+
+        for (key, val) in mol.site_properties.items():
+            key = self._site_prop_key(str(key))
+            props_str += ":" + key
+            data[key] = self._site_data_columns(val)
+            props_str += ":" + data[key].code + ":" + str(len(data[key].widths))
+
+        # delimit properties value with quotes in case property keys include space(s):
+        if re.match("[ ]+", props_str):
+            props_str = '"' + props_str + '"'
+        return "Properties=" + props_str
+
+    def _frame_prop_key(
+            self,
+            key: str
+    ) -> str:
+        key = re.sub(self._frame_prop_key_sanitize_match, "", str(key))
+        return key
+
+    def _frame_prop_val(
+            self,
+            val: str
+    ) -> str:
+        val = re.sub(self._frame_prop_val_sanitize_match, "", str(val))
+        if re.search("[ ]+", val):
+            val = '"' + val + '"'
+        return val
+
+    def _val2propval(
+            self,
+            val: Any
+    ) -> str:
+        code = self._code(val)
+        if code == "R":
+            val = self._fmt_float.format(val)
+        elif code == "L":
+            val = "T" if val else "F"
+        else:
+            val = self._frame_prop_val(str(val))
+
+        return val
+
+    def _get_commentline_and_data(
+            self,
+            mol: IStructure,
+            data: OrderedDict,
+            props: Dict
+    ) -> str:
+        com_str = 'Lattice="' + " ".join(
+            self._fmt_float.format(x) for x in mol.lattice.matrix.flat
+        ) + '"'
+
+        com_str += " " + self._site_prop_keys_and_data(mol, data)
+
+        if props:
+            for (key, val) in props.items():
+                if not isinstance(key, str):
+                    raise TypeError("non-string frame property key")
+                key = self._frame_prop_key(key)
+                com_str += " " + key
+                com_str += "=" + self._val2propval(val)
+        return com_str
+
+    def _compile_data_lines(
             self,
             data: OrderedDict
     ) -> List[str]:
-        strs = []
-        for line in zip(*data.values()):
-            line_strs = []
-            for field in line:
-                if field.count == 1:
-                    line_strs.append(self._val_to_col_str(field.code, field.data))
-                else:
-                    for val in field.data:
-                        line_strs.append(self._val_to_col_str(field.code, val))
-            strs.append(" ".join([field_str for field_str in line_strs]))
-        return strs
+        if not len(set(len(col.data) for col in data.values())) == 1:
+            raise ValueError("inconsistent amount of properties given.")
+
+        prop, col = data.popitem(last=False)
+        lines = [" ".join(f.rjust(w) for (f,w) in zip(fields, col.widths)) for fields in col.data]
+
+        for col in data.values():
+            lines = map(
+                add,
+                lines,
+                [" " + " ".join(f.rjust(w) for (f,w) in zip(fields,col.widths)) for fields in col.data]
+            )
+
+        return lines
 
     def _frame_str(
             self,
             mol: Union[IMolecule, IStructure],
             props: Dict = None
     ) -> str:
-        output = [str(mol.num_sites)]
-
-        prop_line_dict = OrderedDict()
         if not mol.lattice:
             lat = Lattice.cubic(2.*mol.distance_matrix.max())
             center = lat.get_cartesian_coords([.5,.5,.5])
@@ -344,21 +395,15 @@ class EXYZ(XYZ):
                 coords_are_cartesian=True,
                 site_properties=mol.site_properties
             )
-        prop_line_dict["Lattice"] = self._lattice_to_prop(mol.lattice)
-        prop_line_dict["Properties"], data = self._prop_tag_and_data_fields(mol)
 
-        if props:
-            for (key, val) in props.items():
-                if key not in prop_line_dict.keys():
-                    prop_line_dict[self._val_to_framekey(key)] = self._val_to_frameval(val)
-        output.append(
-            " ".join("{}={}".format(k, v) for (k, v) in prop_line_dict.items())
-        )
-        output.extend(self._data_fields_to_strs(data))
+        output = [str(mol.num_sites)]
+
+        data = OrderedDict()
+        output.append(self._get_commentline_and_data(mol, data, props))
+
+        output.extend(self._compile_data_lines(data))
 
         return "\n".join(output)
 
-    def __str__(self):
-        return "\n".join(
-            [self._frame_str(m,p) for (m,p) in zip(self._mols, self._mols_props)]
-        )
+    def __str__(self) -> str:
+        return "\n".join(self._frame_str(m, p) for m, p in zip(self._mols, self._mols_props))
