@@ -179,7 +179,7 @@ class EXYZ(XYZ):
     _frame_prop_key_sanitize_match = "[" + " " + _whites_etc + _quotes + "=" + "]+"
     _frame_prop_val_sanitize_match = "[" + _whites_etc + _quotes + "=" + "]+"
 
-    EXYZData = namedtuple("EXYZData", ["code", "data", "widths"])
+    EXYZData = namedtuple("EXYZData", ["code", "data", "width"])
 
     def __init__(
             self,
@@ -282,7 +282,7 @@ class EXYZ(XYZ):
                 raise TypeError("Inconcistent types in data field")
             code = codes[0]
             data_str = [self._site_prop_val(*self._val2coldata(v, probe_seq=False)[1]) for v in val]
-            widths = [len(d) for d in data_str]
+            width = [len(d) for d in data_str]
         else:
             code = self._code(val)
             if code == "R":
@@ -292,8 +292,8 @@ class EXYZ(XYZ):
             else:
                 data_str = str(val)
             data_str = [self._site_prop_val(data_str)]
-            widths = [len(data_str[0])]
-        return code, data_str, widths
+            width = [len(data_str[0])]
+        return code, data_str, width
 
     def _site_data_columns(
             self,
@@ -301,21 +301,21 @@ class EXYZ(XYZ):
     ) -> EXYZData:
         code0 = None
         data_str0 = []
-        widths0 = None
+        width0 = None
         for d in data_col:
-            code, data_str, widths = self._val2coldata(d)
+            code, data_str, width = self._val2coldata(d)
             if not code0:
                 code0 = code
-            if not widths0:
-                widths0 = widths
+            if not width0:
+                width0 = width
             if not code0 == code:
                 raise TypeError("Inconsistent types in data column")
-            if not len(widths0) == len(widths):
+            if not len(width0) == len(width):
                 raise ValueError("Inconsistent lengths in data column")
             data_str0.append(data_str)
-            widths = tuple(max(w, w0) for w, w0 in zip(widths, widths0))
-            widths0 = widths
-        return EXYZ.EXYZData(code=code, data=data_str0, widths=widths)
+            width = tuple(max(w, w0) for w, w0 in zip(width, width0))
+            width0 = width
+        return EXYZ.EXYZData(code=code, data=data_str0, width=width)
 
 
     def _site_prop_keys_and_data(
@@ -325,17 +325,17 @@ class EXYZ(XYZ):
     ) -> str:
         props_str = "species"
         data["species"] = self._site_data_columns([str(site.specie) for site in mol])
-        props_str += ":" + data["species"].code + ":" + str(len(data["species"].widths))
+        props_str += ":" + data["species"].code + ":" + str(len(data["species"].width))
 
         props_str += ":" + "pos"
         data["pos"] = self._site_data_columns([site.coords for site in mol])
-        props_str += ":" + data["pos"].code + ":" + str(len(data["pos"].widths))
+        props_str += ":" + data["pos"].code + ":" + str(len(data["pos"].width))
 
         for (key, val) in mol.site_properties.items():
             key = self._site_prop_key(str(key))
             props_str += ":" + key
             data[key] = self._site_data_columns(val)
-            props_str += ":" + data[key].code + ":" + str(len(data[key].widths))
+            props_str += ":" + data[key].code + ":" + str(len(data[key].width))
 
         # delimit properties value with quotes in case property keys include space(s):
         if re.match("[ ]+", props_str):
@@ -401,13 +401,13 @@ class EXYZ(XYZ):
             raise ValueError("inconsistent amount of properties given.")
 
         prop, col = data.popitem(last=False)
-        lines = [" ".join(f.rjust(w) for (f,w) in zip(fields, col.widths)) for fields in col.data]
+        lines = [" ".join(f.rjust(w) for (f,w) in zip(fields, col.width)) for fields in col.data]
 
         for col in data.values():
             lines = map(
                 add,
                 lines,
-                [" " + " ".join(f.rjust(w) for (f,w) in zip(fields,col.widths)) for fields in col.data]
+                [" " + " ".join(f.rjust(w) for (f,w) in zip(fields,col.width)) for fields in col.data]
             )
 
         return lines
