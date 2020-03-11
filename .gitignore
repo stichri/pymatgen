@@ -26,6 +26,6 @@ setuptools*
 .eggs/
 gulptmp_4_1
 .coverage
-.mypy_cache
-.vscode
-testexyz.py
+.*_cache
+# VS Code
+.vscode/*

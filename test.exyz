@@ -1,0 +1,4 @@
+2
+Lattice="1.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 1.000000" Properties=species:S:1:pos:R:3:vecstrvals:L:3:vecintvals:I:3:vecwhitestrvals:S:3:intvals:I:1:strvals:S:1:floatvals:R:1
+V 0.000000 0.000000 0.000000 T T T 1 1 1 "a b"    bc "c d" 1 str1 1.000000
+V 0.500000 0.500000 0.500000 F F F 0 0 0    ab "b c"    cd 2 str2 2.000000
