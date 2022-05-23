@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from monty.io import zopen
 
-from pymatgen import IMolecule, IStructure, Molecule, Lattice
+from pymatgen.core import IMolecule, IStructure, Molecule, Lattice
 from collections import OrderedDict, namedtuple
 from operator import add
 from typing import Dict, List, Tuple, Union, Any
