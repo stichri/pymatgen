@@ -718,8 +718,28 @@ class GrainBoundaryGenerator:
         )
 
         # expand both grains
-        top_grain.make_supercell([1, 1, expand_times])
-        bottom_grain.make_supercell([1, 1, expand_times])
+        if isinstance(expand_times, int):
+            supercell_arg = [1, 1, expand_times]
+        elif (expand_times, float):
+            exp_cross = np.cross(
+                top_grain.lattice.matrix[0],
+                top_grain.lattice.matrix[1]
+            )
+            exp_area = np.linalg.norm(exp_cross)
+            exp_normal = expand_times/exp_area * exp_cross/exp_area
+            exp_normal_direct = top_grain.lattice.get_fractional_coords(exp_normal)
+            exp_normal_approx = np.around(exp_normal_direct).astype(int)
+            #print(f"normal_approx: {exp_normal_approx}")
+            #print(f"area: {exp_area}")
+            supercell_arg = [
+                [1, 0, 0],
+                [0, 1, 0],
+                exp_normal_approx
+            ]
+        else:
+            raise RuntimeError("invalid value for expand_times parameter!")
+        top_grain.make_supercell(supercell_arg)
+        bottom_grain.make_supercell(supercell_arg)
         top_grain = fix_pbc(top_grain)
         bottom_grain = fix_pbc(bottom_grain)
 
