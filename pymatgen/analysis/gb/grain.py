@@ -729,8 +729,6 @@ class GrainBoundaryGenerator:
             exp_normal = expand_times/exp_area * exp_cross/exp_area
             exp_normal_direct = top_grain.lattice.get_fractional_coords(exp_normal)
             exp_normal_approx = np.around(exp_normal_direct).astype(int)
-            #print(f"normal_approx: {exp_normal_approx}")
-            #print(f"area: {exp_area}")
             supercell_arg = [
                 [1, 0, 0],
                 [0, 1, 0],
