@@ -744,7 +744,6 @@ class GrainBoundaryGenerator:
         # determine the top-grain location.
         edge_b = 1.0 - max(bottom_grain.frac_coords[:, 2])
         edge_t = 1.0 - max(top_grain.frac_coords[:, 2])
-        c_adjust = (edge_t - edge_b) / 2.0
 
         # construct all species
         all_species = []
@@ -772,8 +771,8 @@ class GrainBoundaryGenerator:
         for site in top_grain:
             all_coords.append(
                 site.coords
-                + half_lattice.matrix[2] * (1 + c_adjust)
-                + unit_ab_adjust * np.linalg.norm(half_lattice.matrix[2] * (1 + c_adjust))
+                + half_lattice.matrix[2]
+                + unit_ab_adjust * np.linalg.norm(half_lattice.matrix[2]
                 + translation_v
                 + ab_shift[0] * whole_matrix_with_vac[0]
                 + ab_shift[1] * whole_matrix_with_vac[1]
