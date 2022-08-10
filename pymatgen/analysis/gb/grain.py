@@ -772,7 +772,7 @@ class GrainBoundaryGenerator:
             all_coords.append(
                 site.coords
                 + half_lattice.matrix[2]
-                + unit_ab_adjust * np.linalg.norm(half_lattice.matrix[2]
+                + unit_ab_adjust * np.linalg.norm(half_lattice.matrix[2])
                 + translation_v
                 + ab_shift[0] * whole_matrix_with_vac[0]
                 + ab_shift[1] * whole_matrix_with_vac[1]
