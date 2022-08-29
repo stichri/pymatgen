@@ -785,10 +785,13 @@ class GrainBoundaryGenerator:
             coords_are_cartesian=True,
             site_properties={"grain_label": grain_labels},
         )
-        # _exhaustively_ merge closer atoms, extract near gb atoms.
+        # extract near gb atoms, _exhaustively_ merge closer atoms.
         cos_c_norm_plane = np.dot(unit_normal_v, whole_matrix_with_vac[2]) / whole_lat.c
         range_c_len = abs(bond_length / cos_c_norm_plane / whole_lat.c)
-        while np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)]) < rm_ratio*bond_length:
+        min_dist_seen = None
+        min_dist = np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)])
+        while min_dist != min_dist_seen:
+            min_dist_seen = min_dist
             sites_near_gb = []
             sites_away_gb = []
             for site in gb_with_vac.sites:
@@ -801,10 +804,13 @@ class GrainBoundaryGenerator:
                 else:
                     sites_away_gb.append(site)
             if len(sites_near_gb) >= 1:
+                print('atoms?!')
                 s_near_gb = Structure.from_sites(sites_near_gb)
                 s_near_gb.merge_sites(tol=bond_length * rm_ratio, mode="d")
                 all_sites = sites_away_gb + s_near_gb.sites
                 gb_with_vac = Structure.from_sites(all_sites)
+            min_dist = np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)])
+            print(f'{np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)])} ?<? {rm_ratio*bond_length}')
 
         # move coordinates into the periodic cell.
         gb_with_vac = fix_pbc(gb_with_vac, whole_lat.matrix)
