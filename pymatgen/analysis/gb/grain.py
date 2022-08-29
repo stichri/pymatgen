@@ -804,13 +804,11 @@ class GrainBoundaryGenerator:
                 else:
                     sites_away_gb.append(site)
             if len(sites_near_gb) >= 1:
-                print('atoms?!')
                 s_near_gb = Structure.from_sites(sites_near_gb)
                 s_near_gb.merge_sites(tol=bond_length * rm_ratio, mode="d")
                 all_sites = sites_away_gb + s_near_gb.sites
                 gb_with_vac = Structure.from_sites(all_sites)
             min_dist = np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)])
-            print(f'{np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)])} ?<? {rm_ratio*bond_length}')
 
         # move coordinates into the periodic cell.
         gb_with_vac = fix_pbc(gb_with_vac, whole_lat.matrix)
