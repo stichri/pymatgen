@@ -721,21 +721,42 @@ class GrainBoundaryGenerator:
         if isinstance(expand_times, int):
             supercell_arg = [1, 1, expand_times]
         elif (expand_times, float):
-            exp_cross = np.cross(
+            exp_cubic_length = expand_times**(1/3)
+            exp_vec1 = np.around([
+                max(
+                    1,
+                    round(
+                        exp_cubic_length/np.linalg.norm(
+                            top_grain.lattice.matrix[0]
+                        )
+                    )
+                ),
+                0,
+                0
+            ]).astype(int)
+            exp_normal = np.cross(
                 top_grain.lattice.matrix[0],
                 top_grain.lattice.matrix[1]
             )
-            exp_area = np.linalg.norm(exp_cross)
-            exp_normal = expand_times/exp_area * exp_cross/exp_area
-            exp_normal_direct = top_grain.lattice.get_fractional_coords(exp_normal)
-            exp_normal_approx = np.around(exp_normal_direct).astype(int)
-            supercell_arg = [
-                [1, 0, 0],
-                [0, 1, 0],
-                exp_normal_approx
-            ]
+            exp_normal /= np.linalg.norm(exp_normal)
+            exp_ortho_lateral = np.cross(
+                exp_normal,
+                top_grain.lattice.matrix[0]
+            )
+            exp_ortho_lateral /= np.linalg.norm(exp_ortho_lateral)
+            exp_vec2 = np.around(
+                top_grain.lattice.get_fractional_coords(
+                    exp_cubic_length*exp_ortho_lateral
+                )
+            ).astype(int)
+            exp_vec3 = np.around(
+                top_grain.lattice.get_fractional_coords(
+                    exp_cubic_length*exp_normal
+                )
+            ).astype(int)
+            supercell_arg = [exp_vec1, exp_vec2, exp_vec3]
         else:
-            raise RuntimeError("invalid value for expand_times parameter!")
+            raise TypeError("invalid value for expand_times parameter!")
         top_grain.make_supercell(supercell_arg)
         bottom_grain.make_supercell(supercell_arg)
         top_grain = fix_pbc(top_grain)
@@ -785,26 +806,25 @@ class GrainBoundaryGenerator:
             coords_are_cartesian=True,
             site_properties={"grain_label": grain_labels},
         )
-        # _exhaustively_ merge closer atoms, extract near gb atoms.
+        # merge closer atoms. extract near gb atoms.
         cos_c_norm_plane = np.dot(unit_normal_v, whole_matrix_with_vac[2]) / whole_lat.c
         range_c_len = abs(bond_length / cos_c_norm_plane / whole_lat.c)
-        while np.min(gb_with_vac.distance_matrix[np.nonzero(gb_with_vac.distance_matrix)]) < rm_ratio*bond_length:
-            sites_near_gb = []
-            sites_away_gb = []
-            for site in gb_with_vac.sites:
-                if (
-                    site.frac_coords[2] < range_c_len
-                    or site.frac_coords[2] > 1 - range_c_len
-                    or (site.frac_coords[2] > 0.5 - range_c_len and site.frac_coords[2] < 0.5 + range_c_len)
-                ):
-                    sites_near_gb.append(site)
-                else:
-                    sites_away_gb.append(site)
-            if len(sites_near_gb) >= 1:
-                s_near_gb = Structure.from_sites(sites_near_gb)
-                s_near_gb.merge_sites(tol=bond_length * rm_ratio, mode="d")
-                all_sites = sites_away_gb + s_near_gb.sites
-                gb_with_vac = Structure.from_sites(all_sites)
+        sites_near_gb = []
+        sites_away_gb: list[PeriodicSite] = []
+        for site in gb_with_vac.sites:
+            if (
+                site.frac_coords[2] < range_c_len
+                or site.frac_coords[2] > 1 - range_c_len
+                or (site.frac_coords[2] > 0.5 - range_c_len and site.frac_coords[2] < 0.5 + range_c_len)
+            ):
+                sites_near_gb.append(site)
+            else:
+                sites_away_gb.append(site)
+        if len(sites_near_gb) >= 1:
+            s_near_gb = Structure.from_sites(sites_near_gb)
+            s_near_gb.merge_sites(tol=bond_length * rm_ratio, mode="d")
+            all_sites = sites_away_gb + s_near_gb.sites  # type: ignore
+            gb_with_vac = Structure.from_sites(all_sites)
 
         # move coordinates into the periodic cell.
         gb_with_vac = fix_pbc(gb_with_vac, whole_lat.matrix)
