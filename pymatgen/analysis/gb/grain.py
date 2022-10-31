@@ -415,9 +415,11 @@ class GrainBoundaryGenerator:
                 If you do not know the rotation angle, but know the sigma value, we have
                 provide the function get_rotation_angle_from_sigma which is able to return
                 all the rotation angles of sigma value you provided.
-            expand_times (int): The multiple times used to expand one unit grain to larger grain.
-                This is used to tune the grain length of GB to warrant that the two GBs in one
-                cell do not interact with each other. Default set to 4.
+            expand_times (int or iterable): When int, the multiple times used to expand one unit
+                grain to larger grain. This is used to tune the grain length of GB to warrant
+                that the two GBs in one cell do not interact with each other. Default set to 4.
+                When iterable, first (float) value approx. grain volume, second value (int) additional
+                normal height in multiples of height of oriented unit cell.
             vacuum_thickness (float, in angstrom): The thickness of vacuum that you want to insert
                 between two grains of the GB. Default to 0.
             ab_shift (list of float, in unit of a, b vectors of Gb): in plane shift of two grains
@@ -720,20 +722,31 @@ class GrainBoundaryGenerator:
         # expand both grains
         if isinstance(expand_times, int):
             supercell_arg = [1, 1, expand_times]
-        elif (expand_times, float):
-            exp_cubic_length = expand_times**(1/3)
-            exp_vec1 = np.around([
-                max(
+        elif isinstance(expand_times, tuple):
+            exp_vol = expand_times[0]
+            exp_norm_add = expand_times[1]
+            exp_cubic_length = exp_vol**(1/3)
+            exp_area_unit = np.linalg.norm(
+                np.cross(
+                    oriended_unit_cell.lattice.matrix[0],
+                    oriended_unit_cell.lattice.matrix[1]
+                )
+            )
+            exp_height_unit = oriended_unit_cell.lattice.volume/exp_area_unit
+            exp_lat_id_by_norm = sorted(
+                (0,1),
+                key=lambda id: np.linalg.norm(top_grain.lattice.matrix[id])
+            )
+            exp_vec1 = [
+                int(max(
                     1,
                     round(
                         exp_cubic_length/np.linalg.norm(
-                            top_grain.lattice.matrix[0]
+                            top_grain.lattice.matrix[exp_lat_id_by_norm[0]]
                         )
                     )
-                ),
-                0,
-                0
-            ]).astype(int)
+                )) if id == exp_lat_id_by_norm[0] else 0 for id in (0,1,2)
+            ]
             exp_normal = np.cross(
                 top_grain.lattice.matrix[0],
                 top_grain.lattice.matrix[1]
@@ -741,7 +754,7 @@ class GrainBoundaryGenerator:
             exp_normal /= np.linalg.norm(exp_normal)
             exp_ortho_lateral = np.cross(
                 exp_normal,
-                top_grain.lattice.matrix[0]
+                top_grain.lattice.get_cartesian_coords(exp_vec1)
             )
             exp_ortho_lateral /= np.linalg.norm(exp_ortho_lateral)
             exp_vec2 = np.around(
@@ -749,14 +762,20 @@ class GrainBoundaryGenerator:
                     exp_cubic_length*exp_ortho_lateral
                 )
             ).astype(int)
+            exp_area = np.linalg.norm(
+                np.cross(
+                    top_grain.lattice.get_cartesian_coords(exp_vec1),
+                    top_grain.lattice.get_cartesian_coords(exp_vec2)
+                )
+            )
             exp_vec3 = np.around(
                 top_grain.lattice.get_fractional_coords(
-                    exp_cubic_length*exp_normal
+                    (exp_cubic_length+exp_norm_add*exp_height_unit)*exp_normal
                 )
             ).astype(int)
             supercell_arg = [exp_vec1, exp_vec2, exp_vec3]
         else:
-            raise TypeError("invalid value for expand_times parameter!")
+            raise TypeError(f"invalid value ({expand_times}) for expand_times parameter!")
         top_grain.make_supercell(supercell_arg)
         bottom_grain.make_supercell(supercell_arg)
         top_grain = fix_pbc(top_grain)
