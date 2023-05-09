@@ -1,9 +1,8 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes to identify optimal substrates for film growth
 """
+
+from __future__ import annotations
 
 import warnings
 

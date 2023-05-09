@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module defines site transformations which transforms a structure into
 another structure. Site transformations differ from standard transformations
@@ -83,7 +80,7 @@ class InsertSitesTransformation(AbstractTransformation):
         return None
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: False"""
         return False
 
@@ -135,7 +132,7 @@ class ReplaceSiteSpeciesTransformation(AbstractTransformation):
         return None
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: False"""
         return False
 
@@ -150,7 +147,6 @@ class RemoveSitesTransformation(AbstractTransformation):
         Args:
             indices_to_remove: List of indices to remove. E.g., [0, 1, 2]
         """
-
         self.indices_to_remove = indices_to_remove
 
     def apply_transformation(self, structure):
@@ -180,7 +176,7 @@ class RemoveSitesTransformation(AbstractTransformation):
         return None
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: False"""
         return False
 
@@ -244,7 +240,7 @@ class TranslateSitesTransformation(AbstractTransformation):
         return TranslateSitesTransformation(self.indices_to_move, -self.translation_vector, self.vector_in_frac_coords)
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: False"""
         return False
 
@@ -541,7 +537,7 @@ class PartialRemoveSitesTransformation(AbstractTransformation):
         return None
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: True"""
         return True
 
@@ -580,7 +576,7 @@ class AddSitePropertyTransformation(AbstractTransformation):
         return None
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """Return: False"""
         return False
 
@@ -655,7 +651,7 @@ class RadialSiteDistortionTransformation(AbstractTransformation):
         return False
 
     @property
-    def is_one_to_many(self):
+    def is_one_to_many(self) -> bool:
         """
         Determines if a Transformation is a one-to-many transformation. If a
         Transformation is a one-to-many transformation, the

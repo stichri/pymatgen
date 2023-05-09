@@ -1,5 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
 """
 This module is intended to be used to compute Pourbaix diagrams
 of arbitrary compositions and formation energies. If you use
@@ -133,8 +131,6 @@ class PourbaixEntry(MSONable, Stringify):
     @property
     def energy(self):
         """
-        returns energy
-
         Returns (float): total energy of the Pourbaix
             entry (at pH, V = 0 vs. SHE)
         """
@@ -173,7 +169,6 @@ class PourbaixEntry(MSONable, Stringify):
 
         Returns:
             fraction of element / sum(all non-OH elements)
-
         """
         return self.composition.get(element) * self.normalization_factor
 
@@ -231,13 +226,10 @@ class PourbaixEntry(MSONable, Stringify):
         Invokes a PourbaixEntry from a dictionary
         """
         entry_type = d["entry_type"]
-        if entry_type == "Ion":
-            entry = IonEntry.from_dict(d["entry"])
-        else:
-            entry = MontyDecoder().process_decoded(d["entry"])
+        entry = IonEntry.from_dict(d["entry"]) if entry_type == "Ion" else MontyDecoder().process_decoded(d["entry"])
         entry_id = d["entry_id"]
         concentration = d["concentration"]
-        return PourbaixEntry(entry, entry_id, concentration)
+        return cls(entry, entry_id, concentration)
 
     @property
     def normalization_factor(self):
@@ -274,9 +266,6 @@ class PourbaixEntry(MSONable, Stringify):
             f"Pourbaix Entry : {self.entry.composition} with energy = {self.energy:.4f}, npH = {self.npH}, "
             f"nPhi = {self.nPhi}, nH2O = {self.nH2O}, entry_id = {self.entry_id} "
         )
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class MultiEntry(PourbaixEntry):
@@ -317,10 +306,7 @@ class MultiEntry(PourbaixEntry):
             "uncorrected_energy",
         ]:
             # TODO: Composition could be changed for compat with sum
-            if item == "composition":
-                start = Composition({})
-            else:
-                start = 0
+            start = Composition({}) if item == "composition" else 0
             return sum(
                 (getattr(e, item) * w for e, w in zip(self.entry_list, self.weights)),
                 start,
@@ -338,16 +324,13 @@ class MultiEntry(PourbaixEntry):
         """
         MultiEntry name, i. e. the name of each entry joined by ' + '
         """
-        return " + ".join([e.name for e in self.entry_list])
+        return " + ".join(e.name for e in self.entry_list)
 
     def __repr__(self):
         return (
             f"Multiple Pourbaix Entry: energy = {self.energy:.4f}, npH = {self.npH}, nPhi = {self.nPhi}, "
             f"nH2O = {self.nH2O}, entry_id = {self.entry_id}, species: {self.name}"
         )
-
-    def __str__(self):
-        return self.__repr__()
 
     def as_dict(self):
         """
@@ -397,7 +380,7 @@ class IonEntry(PDEntry):
         """
         self.ion = ion
         # Auto-assign name
-        name = name if name else self.ion.reduced_formula
+        name = name or self.ion.reduced_formula
         super().__init__(composition=ion.composition, energy=energy, name=name, attribute=attribute)
 
     @classmethod
@@ -405,7 +388,7 @@ class IonEntry(PDEntry):
         """
         Returns an IonEntry object from a dict.
         """
-        return IonEntry(Ion.from_dict(d["ion"]), d["energy"], d.get("name"), d.get("attribute"))
+        return cls(Ion.from_dict(d["ion"]), d["energy"], d.get("name"), d.get("attribute"))
 
     def as_dict(self):
         """
@@ -416,9 +399,6 @@ class IonEntry(PDEntry):
 
     def __repr__(self):
         return f"IonEntry : {self.composition} with energy = {self.energy:.4f}"
-
-    def __str__(self):
-        return self.__repr__()
 
 
 def ion_or_solid_comp_object(formula):
@@ -449,6 +429,7 @@ ELEMENTS_HO = {Element("H"), Element("O")}
 # TODO: the solids filter breaks some of the functionality of the
 #       heatmap plotter, because the reference states for decomposition
 #       don't include oxygen/hydrogen in the OER/HER regions
+
 
 # TODO: create a from_phase_diagram class method for non-formation energy
 #       invocation
@@ -535,7 +516,7 @@ class PourbaixDiagram(MSONable):
             self._unprocessed_entries = solid_entries + ion_entries
 
             if not len(solid_entries + ion_entries) == len(entries):
-                raise ValueError("All supplied entries must have a phase type of " 'either "Solid" or "Ion"')
+                raise ValueError('All supplied entries must have a phase type of either "Solid" or "Ion"')
 
             if self.filter_solids:
                 # O is 2.46 b/c pbx entry finds energies referenced to H2O
@@ -562,7 +543,6 @@ class PourbaixDiagram(MSONable):
         Returns:
             list of vectors, [[nph, nphi, e0, x1, x2, ..., xn-1]]
             corresponding to each entry in nph-nphi-composition space
-
         """
         vecs = [
             [entry.npH, entry.nPhi, entry.energy] + [entry.composition.get(elt) for elt in self.pbx_elts[:-1]]
@@ -586,7 +566,6 @@ class PourbaixDiagram(MSONable):
 
         Returns: list of entries and stable facets corresponding to that
             list of entries
-
         """
         ion_entries = [entry for entry in entries if entry.phase_type == "Ion"]
         solid_entries = [entry for entry in entries if entry.phase_type == "Solid"]
@@ -615,7 +594,7 @@ class PourbaixDiagram(MSONable):
         hull = ConvexHull(points, qhull_options="QJ i")
 
         # Create facets and remove top
-        facets = [facet for facet in hull.simplices if not len(points) - 1 in facet]
+        facets = [facet for facet in hull.simplices if len(points) - 1 not in facet]
 
         if self.dim > 1:
             logger.debug("Filtering facets by Pourbaix composition")
@@ -643,7 +622,6 @@ class PourbaixDiagram(MSONable):
 
         Returns:
             ([MultiEntry]) list of stable MultiEntry candidates
-
         """
         # Get composition
         tot_comp = Composition(self._elt_comp)
@@ -697,7 +675,6 @@ class PourbaixDiagram(MSONable):
             nproc (int): number of processes to be used in parallel
                 treatment of entry combos
         """
-
         N = len(self._elt_comp)  # No. of elements
         total_comp = Composition(self._elt_comp)
 
@@ -756,7 +733,7 @@ class PourbaixDiagram(MSONable):
             entry_comps = [e.composition for e in entry_list]
             rxn = Reaction(entry_comps + dummy_oh, [prod_comp])
             react_coeffs = [-rxn.get_coeff(comp) for comp in entry_comps]
-            all_coeffs = react_coeffs + [rxn.get_coeff(prod_comp)]
+            all_coeffs = [*react_coeffs, rxn.get_coeff(prod_comp)]
 
             # Check if reaction coeff threshold met for Pourbaix compounds
             # All reactant/product coefficients must be positive nonzero
@@ -816,7 +793,7 @@ class PourbaixDiagram(MSONable):
             [0, 0, -1, 2 * g_max],
         ]
         hs_hyperplanes = np.vstack([hyperplanes, border_hyperplanes])
-        interior_point = np.average(limits, axis=1).tolist() + [g_max]
+        interior_point = [*np.average(limits, axis=1).tolist(), g_max]
         hs_int = HalfspaceIntersection(hs_hyperplanes, np.array(interior_point))
 
         # organize the boundary points by entry
@@ -858,7 +835,6 @@ class PourbaixDiagram(MSONable):
             V (float): V to find stable entry
 
         Returns:
-
         """
         energies_at_conditions = [e.normalized_energy_at_conditions(pH, V) for e in self.stable_entries]
         return self.stable_entries[np.argmin(energies_at_conditions)]
@@ -878,7 +854,6 @@ class PourbaixDiagram(MSONable):
             Decomposition energy for the entry, i. e. the energy above
                 the "Pourbaix hull" in eV/atom at the given conditions
         """
-
         # Check composition consistency between entry and Pourbaix diagram:
         pbx_comp = Composition(self._elt_comp).fractional_composition
         entry_pbx_comp = Composition(
@@ -906,7 +881,6 @@ class PourbaixDiagram(MSONable):
 
         Returns:
             (float or [float]) minimum Pourbaix energy at conditions
-
         """
         all_gs = np.array([e.normalized_energy_at_conditions(pH, V) for e in self.stable_entries])
         base = np.min(all_gs, axis=0)
@@ -924,7 +898,6 @@ class PourbaixDiagram(MSONable):
             (PourbaixEntry or MultiEntry): Pourbaix or multi-entry
                 corresponding ot the minimum energy entry at a given
                 pH, V condition
-
         """
         all_gs = np.array([e.normalized_energy_at_conditions(pH, V) for e in self.stable_entries])
         return self.stable_entries[np.argmin(all_gs)]
@@ -1120,7 +1093,6 @@ class PourbaixPlotter:
             **kwargs ():
 
         Returns:
-
         """
         if pH_range is None:
             pH_range = [-2, 16]
@@ -1143,7 +1115,7 @@ class PourbaixPlotter:
 
         # Set ticklabels
         # ticklabels = [t.get_text() for t in cbar.ax.get_yticklabels()]
-        # ticklabels[-1] = '>={}'.format(ticklabels[-1])
+        # ticklabels[-1] = f">={ticklabels[-1]}"
         # cbar.ax.set_yticklabels(ticklabels)
 
         return plt
@@ -1169,7 +1141,7 @@ def generate_entry_label(entry):
         entry (PourbaixEntry or MultiEntry): entry to get a label for
     """
     if isinstance(entry, MultiEntry):
-        return " + ".join([e.name for e in entry.entry_list])
+        return " + ".join(e.name for e in entry.entry_list)
 
     # TODO - a more elegant solution could be added later to Stringify
     # for example, the pattern re.sub(r"([-+][\d\.]*)", r"$^{\1}$", )

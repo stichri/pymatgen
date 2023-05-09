@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module implements symmetry-related structure forms.
 """
@@ -106,8 +103,8 @@ class SymmetrizedStructure(Structure):
         def to_s(x):
             return f"{x:0.6f}"
 
-        outs.append("abc   : " + " ".join([to_s(i).rjust(10) for i in self.lattice.abc]))
-        outs.append("angles: " + " ".join([to_s(i).rjust(10) for i in self.lattice.angles]))
+        outs.append("abc   : " + " ".join(to_s(i).rjust(10) for i in self.lattice.abc))
+        outs.append("angles: " + " ".join(to_s(i).rjust(10) for i in self.lattice.angles))
         if self._charge:
             if self._charge >= 0:
                 outs.append(f"Overall Charge: +{self._charge}")
@@ -128,14 +125,14 @@ class SymmetrizedStructure(Structure):
         outs.append(
             tabulate(
                 data,
-                headers=["#", "SP", "a", "b", "c", "Wyckoff"] + keys,
+                headers=["#", "SP", "a", "b", "c", "Wyckoff", *keys],
             )
         )
         return "\n".join(outs)
 
     def as_dict(self):
         """
-        :return: MSONAble dict
+        :return: MSONable dict
         """
         structure = Structure.from_sites(self.sites)
         return {
@@ -151,7 +148,7 @@ class SymmetrizedStructure(Structure):
         :param d: Dict representation
         :return: SymmetrizedStructure
         """
-        return SymmetrizedStructure(
+        return cls(
             Structure.from_dict(d["structure"]),
             spacegroup=d["spacegroup"],
             equivalent_positions=d["equivalent_positions"],

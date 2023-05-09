@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes for non-standard space-group settings
 """
@@ -136,7 +133,6 @@ class JonesFaithfulTransformation:
     @property
     def p(self) -> list[float]:
         """
-
         :return: translation vector
         """
         return self._p
@@ -144,7 +140,6 @@ class JonesFaithfulTransformation:
     @property
     def inverse(self) -> JonesFaithfulTransformation:
         """
-
         :return: JonesFaithfulTransformation
         """
         Q = np.linalg.inv(self.P)
@@ -170,12 +165,11 @@ class JonesFaithfulTransformation:
         :param symmop: SymmOp or MagSymmOp
         :return:
         """
-        W = symmop.rotation_matrix
-        w = symmop.translation_vector
+        W_rot = symmop.rotation_matrix
+        w_translation = symmop.translation_vector
         Q = np.linalg.inv(self.P)
-        W_ = np.matmul(np.matmul(Q, W), self.P)
-        I = np.identity(3)
-        w_ = np.matmul(Q, (w + np.matmul(W - I, self.p)))
+        W_ = np.matmul(np.matmul(Q, W_rot), self.P)
+        w_ = np.matmul(Q, (w_translation + np.matmul(W_rot - np.identity(3), self.p)))
         w_ = np.mod(w_, 1.0)
         if isinstance(symmop, MagSymmOp):
             return MagSymmOp.from_rotation_and_translation_and_time_reversal(
@@ -210,7 +204,9 @@ class JonesFaithfulTransformation:
         """
         return Lattice(np.matmul(lattice.matrix, self.P))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
         return np.allclose(self.P, other.P) and np.allclose(self.p, other.p)
 
     def __str__(self):

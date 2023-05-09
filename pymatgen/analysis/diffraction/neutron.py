@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module implements a neutron diffraction (ND) pattern calculator.
 """
@@ -13,14 +10,13 @@ from math import asin, cos, degrees, pi, radians, sin
 
 import numpy as np
 
-from pymatgen.core.structure import Structure
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-
-from .core import (
+from pymatgen.analysis.diffraction.core import (
     AbstractDiffractionPatternCalculator,
     DiffractionPattern,
     get_unique_families,
 )
+from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 __author__ = "Yuta Suzuki"
 __copyright__ = "Copyright 2018, The Materials Project"
@@ -50,7 +46,7 @@ class NDCalculator(AbstractDiffractionPatternCalculator):
 
     """
 
-    def __init__(self, wavelength=1.54184, symprec=0, debye_waller_factors=None):
+    def __init__(self, wavelength=1.54184, symprec: float = 0, debye_waller_factors=None):
         """
         Initializes the ND calculator with a given radiation.
 
@@ -141,7 +137,6 @@ class NDCalculator(AbstractDiffractionPatternCalculator):
             # Force miller indices to be integers.
             hkl = [int(round(i)) for i in hkl]
             if g_hkl != 0:
-
                 d_hkl = 1 / g_hkl
 
                 # Bragg condition

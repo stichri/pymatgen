@@ -5,6 +5,8 @@ https://www.nature.com/articles/s41598-019-45028-y
 https://www.nature.com/articles/s41524-020-0319-4
 """
 
+from __future__ import annotations
+
 import numpy as np
 
 from pymatgen.io.vasp.outputs import Wavecar
@@ -20,11 +22,11 @@ class SOCSpillage:
     def __init__(self, wf_noso="", wf_so=""):
         """
         Requires path to WAVECAR files with and without LSORBIT = .TRUE.
+
         Args:
             wf_noso : WAVECAR without spin-orbit coupling
             wf_so : WAVECAR with spin-orbit coupling
         """
-
         self.wf_noso = wf_noso
         self.wf_so = wf_so
 
@@ -137,7 +139,6 @@ class SOCSpillage:
                 if (
                     self.isclose(kso[0], knoso[0]) and self.isclose(kso[1], knoso[1]) and self.isclose(kso[2], knoso[2])
                 ):  # do kpoints match?
-
                     # changes section 2
                     nelec_up = n_arr[nk1 - 1, 0]
                     nelec_dn = n_arr[nk1 - 1, 1]
@@ -163,7 +164,7 @@ class SOCSpillage:
                     if np.array(noso.coeffs[1][nk1 - 1]).shape[1] == vs // 2:
                         # if nk1==10 and nk2==10:
                         # print (np.array(noso.coeffs[1][nk1-1]).shape[1], )
-                        # prepare matricies
+                        # prepare matrices
                         for n1 in range(1, nelec_up + 1):
                             Vnoso[0 : vs // 2, n1 - 1] = np.array(noso.coeffs[0][nk1 - 1][n1 - 1])[0 : vs // 2]
                         for n1 in range(1, nelec_dn + 1):

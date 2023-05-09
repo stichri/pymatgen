@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module implements an XRD pattern calculator.
 """
@@ -13,14 +10,13 @@ from math import asin, cos, degrees, pi, radians, sin
 
 import numpy as np
 
-from pymatgen.core.structure import Structure
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-
-from .core import (
+from pymatgen.analysis.diffraction.core import (
     AbstractDiffractionPatternCalculator,
     DiffractionPattern,
     get_unique_families,
 )
+from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 # XRD wavelengths in angstroms
 WAVELENGTHS = {
@@ -105,14 +101,14 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
 
        .. math::
 
-           P( \theta) =  \frac{1 +  \cos^2(2 \theta)}
+           P( \theta) = \frac{1 +  \cos^2(2 \theta)}
            { \sin^2( \theta) \cos( \theta)}
     """
 
     # Tuple of available radiation keywords.
     AVAILABLE_RADIATION = tuple(WAVELENGTHS)
 
-    def __init__(self, wavelength="CuKa", symprec=0, debye_waller_factors=None):
+    def __init__(self, wavelength="CuKa", symprec: float = 0, debye_waller_factors=None):
         """
         Initializes the XRD calculator with a given radiation.
 
@@ -215,7 +211,6 @@ class XRDCalculator(AbstractDiffractionPatternCalculator):
             # Force miller indices to be integers.
             hkl = [int(round(i)) for i in hkl]
             if g_hkl != 0:
-
                 # Bragg condition
                 theta = asin(wavelength * g_hkl / 2)
 

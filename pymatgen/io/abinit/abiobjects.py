@@ -1,10 +1,10 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
 #
 # pylint: disable=no-member, chained-comparison
 """
 Low-level objects providing an abstraction for the objects involved in the calculation.
 """
+
+from __future__ import annotations
 
 import abc
 import collections
@@ -18,7 +18,6 @@ from monty.design_patterns import singleton
 from monty.json import MontyDecoder, MontyEncoder, MSONable
 
 from pymatgen.core import ArrayWithUnit, Lattice, Species, Structure, units
-from pymatgen.util.serialization import pmg_serialize
 
 
 def lattice_from_abivars(cls=None, *args, **kwargs):
@@ -31,15 +30,14 @@ def lattice_from_abivars(cls=None, *args, **kwargs):
         cls: Lattice class to be instantiated. pymatgen.core.lattice.Lattice if `cls` is None
 
     Example:
-
         lattice_from_abivars(acell=3*[10], rprim=np.eye(3))
     """
     cls = Lattice if cls is None else cls
     kwargs.update(dict(*args))
     d = kwargs
 
-    rprim = d.get("rprim", None)
-    angdeg = d.get("angdeg", None)
+    rprim = d.get("rprim")
+    angdeg = d.get("angdeg")
     acell = d["acell"]
 
     if rprim is not None:
@@ -106,8 +104,7 @@ def structure_from_abivars(cls=None, *args, **kwargs):
     Args:
         cls: Structure class to be instantiated. pymatgen.core.structure.Structure if cls is None
 
-    example:
-
+    Example:
         al_structure = structure_from_abivars(
             acell=3*[7.5],
             rprim=[0.0, 0.5, 0.5,
@@ -128,16 +125,16 @@ def structure_from_abivars(cls=None, *args, **kwargs):
 
     # lattice = Lattice.from_dict(d, fmt="abivars")
     lattice = lattice_from_abivars(**d)
-    coords, coords_are_cartesian = d.get("xred", None), False
+    coords, coords_are_cartesian = d.get("xred"), False
 
     if coords is None:
-        coords = d.get("xcart", None)
+        coords = d.get("xcart")
         if coords is not None:
             if "xangst" in d:
                 raise ValueError("xangst and xcart are mutually exclusive")
             coords = ArrayWithUnit(coords, "bohr").to("ang")
         else:
-            coords = d.get("xangst", None)
+            coords = d.get("xangst")
         coords_are_cartesian = True
 
     if coords is None:
@@ -175,7 +172,6 @@ def species_by_znucl(structure: Structure) -> list[Species]:
     Return list of unique specie found in structure **ordered according to sites**.
 
     Example:
-
         Site0: 0.5 0 0 O
         Site1: 0   0 0 Si
 
@@ -234,7 +230,6 @@ or the Virtual Crystal Approximation."""
 
     if not enforce_order:
         types_of_specie = species_by_znucl(structure)
-        # types_of_specie = structure.types_of_species
 
         # [ntypat] list
         znucl_type = [specie.number for specie in types_of_specie]
@@ -255,13 +250,13 @@ or the Virtual Crystal Approximation."""
     xred = np.where(np.abs(xred) > 1e-8, xred, 0.0)
 
     # Info on atoms.
-    d = dict(
-        natom=natom,
-        ntypat=ntypat,
-        typat=typat,
-        znucl=znucl_type,
-        xred=xred,
-    )
+    d = {
+        "natom": natom,
+        "ntypat": ntypat,
+        "typat": typat,
+        "znucl": znucl_type,
+        "xred": xred,
+    }
 
     # Add info on the lattice.
     # Should we use (rprim, acell) or (angdeg, acell) to specify the lattice?
@@ -389,10 +384,11 @@ class SpinMode(
             "nspden": self.nspden,
         }
 
-    @pmg_serialize
     def as_dict(self):
         """Convert object to dict."""
-        return {k: getattr(self, k) for k in self._fields}
+        out = {k: getattr(self, k) for k in self._fields}
+        out.update({"@module": type(self).__module__, "@class": type(self).__name__})
+        return out
 
     @classmethod
     def from_dict(cls, d):
@@ -484,7 +480,7 @@ class Smearing(AbivarAble, MSONable):
     @property
     def mode(self):
         """String with smearing technique."""
-        for (mode_str, occopt) in self._mode2occopt.items():
+        for mode_str, occopt in self._mode2occopt.items():
             if occopt == self.occopt:
                 return mode_str
         raise AttributeError(f"Unknown occopt {self.occopt}")
@@ -500,10 +496,14 @@ class Smearing(AbivarAble, MSONable):
             return {"occopt": 1, "tsmear": 0.0}
         return {"occopt": self.occopt, "tsmear": self.tsmear}
 
-    @pmg_serialize
     def as_dict(self):
-        """json friendly dict representation of Smearing"""
-        return {"occopt": self.occopt, "tsmear": self.tsmear}
+        """JSON-friendly dict representation of Smearing"""
+        return {
+            "@module": type(self).__module__,
+            "@class": type(self).__name__,
+            "occopt": self.occopt,
+            "tsmear": self.tsmear,
+        }
 
     @staticmethod
     def from_dict(d):
@@ -515,18 +515,18 @@ class ElectronsAlgorithm(dict, AbivarAble, MSONable):
     """Variables controlling the SCF/NSCF algorithm."""
 
     # None indicates that we use abinit defaults.
-    _DEFAULT = dict(
-        iprcell=None,
-        iscf=None,
-        diemac=None,
-        diemix=None,
-        diemixmag=None,
-        dielam=None,
-        diegap=None,
-        dielng=None,
-        diecut=None,
-        nstep=50,
-    )
+    _DEFAULT = {
+        "iprcell": None,
+        "iscf": None,
+        "diemac": None,
+        "diemix": None,
+        "diemixmag": None,
+        "dielam": None,
+        "diegap": None,
+        "dielng": None,
+        "diecut": None,
+        "nstep": 50,
+    }
 
     def __init__(self, *args, **kwargs):
         """Initialize object."""
@@ -540,10 +540,9 @@ class ElectronsAlgorithm(dict, AbivarAble, MSONable):
         """Dictionary with Abinit input variables."""
         return self.copy()
 
-    @pmg_serialize
     def as_dict(self):
         """Convert object to dict."""
-        return self.copy()
+        return {"@module": type(self).__module__, "@class": type(self).__name__, **self.copy()}
 
     @classmethod
     def from_dict(cls, d):
@@ -600,7 +599,7 @@ class Electrons(AbivarAble, MSONable):
         return self.spin_mode.nspden
 
     def as_dict(self):
-        """json friendly dict representation"""
+        """Json friendly dict representation"""
         d = {}
         d["@module"] = type(self).__module__
         d["@class"] = type(self).__name__
@@ -786,7 +785,7 @@ class KSampling(AbivarAble, MSONable):
         # self.abivars["#comment"] = comment
 
     @property
-    def is_homogeneous(self):
+    def is_homogeneous(self) -> bool:
         """Homogeneous sampling."""
         return self.mode not in ["path"]
 
@@ -846,7 +845,7 @@ class KSampling(AbivarAble, MSONable):
             use_symmetries=use_symmetries,
             use_time_reversal=use_time_reversal,
             chksymbreak=chksymbreak,
-            comment=comment if comment else "Monkhorst-Pack scheme with user-specified shiftk",
+            comment=comment or "Monkhorst-Pack scheme with user-specified shiftk",
         )
 
     @classmethod
@@ -884,7 +883,7 @@ class KSampling(AbivarAble, MSONable):
             use_symmetries=use_symmetries,
             use_time_reversal=use_time_reversal,
             chksymbreak=chksymbreak,
-            comment=comment if comment else "Automatic Monkhorst-Pack scheme",
+            comment=comment or "Automatic Monkhorst-Pack scheme",
         )
 
     @classmethod
@@ -907,7 +906,7 @@ class KSampling(AbivarAble, MSONable):
 
             sp = HighSymmKpath(structure)
 
-            # Flat the array since "path" is a a list of lists!
+            # Flat the array since "path" is a list of lists!
             kpath_labels = []
             for labels in sp.kpath["path"]:
                 kpath_labels.extend(labels)
@@ -921,7 +920,7 @@ class KSampling(AbivarAble, MSONable):
             mode=KSamplingModes.path,
             num_kpts=ndivsm,
             kpts=kpath_bounds,
-            comment=comment if comment else "K-Path scheme",
+            comment=comment or "K-Path scheme",
         )
 
     @classmethod
@@ -1051,7 +1050,6 @@ class RelaxationMethod(AbivarAble, MSONable):
 
     def __init__(self, *args, **kwargs):
         """Initialize object."""
-
         # Initialize abivars with the default values.
         self.abivars = self._default_vars
 
@@ -1528,20 +1526,20 @@ class SelfEnergy(AbivarAble):
 
     def to_abivars(self):
         """Returns a dictionary with the abinit variables."""
-        abivars = dict(
-            gwcalctyp=self.gwcalctyp,
-            ecuteps=self.ecuteps,
-            ecutsigx=self.ecutsigx,
-            symsigma=self.symsigma,
-            gw_qprange=self.gw_qprange,
-            gwpara=self.gwpara,
-            optdriver=self.optdriver,
-            nband=self.nband
+        abivars = {
+            "gwcalctyp": self.gwcalctyp,
+            "ecuteps": self.ecuteps,
+            "ecutsigx": self.ecutsigx,
+            "symsigma": self.symsigma,
+            "gw_qprange": self.gw_qprange,
+            "gwpara": self.gwpara,
+            "optdriver": self.optdriver,
+            "nband": self.nband
             # "ecutwfn"  : self.ecutwfn,
             # "kptgw"    : self.kptgw,
             # "nkptgw"   : self.nkptgw,
             # "bdgw"     : self.bdgw,
-        )
+        }
 
         # FIXME: problem with the spin
         # assert len(self.bdgw) == self.nkptgw
@@ -1666,22 +1664,22 @@ class ExcHamiltonian(AbivarAble):
 
     def to_abivars(self):
         """Returns a dictionary with the abinit variables."""
-        abivars = dict(
-            bs_calctype=1,
-            bs_loband=self.bs_loband,
+        abivars = {
+            "bs_calctype": 1,
+            "bs_loband": self.bs_loband,
             # nband=self.nband,
-            mbpt_sciss=self.mbpt_sciss,
-            ecuteps=self.ecuteps,
-            bs_algorithm=self._ALGO2VAR[self.algo],
-            bs_coulomb_term=21,
-            mdf_epsinf=self.mdf_epsinf,
-            bs_exchange_term=1 if self.with_lf else 0,
-            inclvkb=self.inclvkb,
-            zcut=self.zcut,
-            bs_freq_mesh=self.bs_freq_mesh,
-            bs_coupling=self._EXC_TYPES[self.exc_type],
-            optdriver=self.optdriver,
-        )
+            "mbpt_sciss": self.mbpt_sciss,
+            "ecuteps": self.ecuteps,
+            "bs_algorithm": self._ALGO2VAR[self.algo],
+            "bs_coulomb_term": 21,
+            "mdf_epsinf": self.mdf_epsinf,
+            "bs_exchange_term": 1 if self.with_lf else 0,
+            "inclvkb": self.inclvkb,
+            "zcut": self.zcut,
+            "bs_freq_mesh": self.bs_freq_mesh,
+            "bs_coupling": self._EXC_TYPES[self.exc_type],
+            "optdriver": self.optdriver,
+        }
 
         if self.use_haydock:
             # FIXME
@@ -1691,11 +1689,8 @@ class ExcHamiltonian(AbivarAble):
                 bs_haydock_tol=[0.05, 0],  # Stopping criteria
             )
 
-        elif self.use_direct_diago:
-            raise NotImplementedError("")
-
-        elif self.use_cg:
-            raise NotImplementedError("")
+        elif self.use_direct_diago or self.use_cg:
+            raise NotImplementedError
 
         else:
             raise ValueError(f"Unknown algorithm for EXC: {self.algo}")

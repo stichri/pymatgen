@@ -5,12 +5,14 @@ Developer script to convert yaml periodic table to json format.
 Created on Nov 15, 2011
 """
 
+from __future__ import annotations
+
 import json
 import re
 from itertools import product
 
-import ruamel.yaml as yaml
 from monty.serialization import dumpfn, loadfn
+from ruamel import yaml
 
 from pymatgen.core import Element
 from pymatgen.core.periodic_table import get_el_sp
@@ -71,11 +73,11 @@ def parse_ionic_radii():
     with open("periodic_table.yaml") as f:
         data = yaml.load(f)
     with open("ionic_radii.csv") as f:
-        radiidata = f.read()
-    radiidata = radiidata.split("\r")
-    header = radiidata[0].split(",")
-    for i in range(1, len(radiidata)):
-        line = radiidata[i]
+        radii_data = f.read()
+    radii_data = radii_data.split("\r")
+    header = radii_data[0].split(",")
+    for idx in range(1, len(radii_data)):
+        line = radii_data[idx]
         toks = line.strip().split(",")
         suffix = ""
         name = toks[1]
@@ -141,7 +143,7 @@ def update_ionic_radii():
     with open("periodic_table.yaml") as f:
         data = yaml.load(f)
 
-    for el, d in data.items():
+    for d in data.values():
         if "Ionic_radii" in d:
             d["Ionic radii"] = {k: v / 100 for k, v in d["Ionic_radii"].items()}
             del d["Ionic_radii"]
@@ -174,16 +176,13 @@ def parse_shannon_radii():
             el = sheet[f"A{i}"].value
         if sheet[f"B{i}"].value:
             charge = int(sheet[f"B{i}"].value)
-            radii[el][charge] = dict()
+            radii[el][charge] = {}
         if sheet[f"C{i}"].value:
             cn = sheet[f"C{i}"].value
             if cn not in radii[el][charge]:
-                radii[el][charge][cn] = dict()
+                radii[el][charge][cn] = {}
 
-        if sheet[f"D{i}"].value is not None:
-            spin = sheet[f"D{i}"].value
-        else:
-            spin = ""
+        spin = sheet[f"D{i}"].value if sheet[f"D{i}"].value is not None else ""
 
         radii[el][charge][cn][spin] = {
             "crystal_radius": float(sheet[f"E{i}"].value),
@@ -275,7 +274,7 @@ def add_electron_affinities():
     print(ea)
     pt = loadfn("../pymatgen/core/periodic_table.json")
     for k, v in pt.items():
-        v["Electron affinity"] = ea.get(Element(k).Z, None)
+        v["Electron affinity"] = ea.get(Element(k).Z)
     dumpfn(pt, "../pymatgen/core/periodic_table.json")
 
 
@@ -298,10 +297,7 @@ def add_ionization_energies():
         if row:
             Z = int(row[0])
             val = re.sub(r"\s", "", row[8].strip("()[]"))
-            if val == "":
-                val = None
-            else:
-                val = float(val)
+            val = None if val == "" else float(val)
             data[Z].append(val)
     print(data)
     print(data[51])

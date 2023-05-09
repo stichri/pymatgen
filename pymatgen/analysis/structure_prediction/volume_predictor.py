@@ -1,9 +1,8 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 Predict volumes of crystal structures.
 """
+
+from __future__ import annotations
 
 import os
 import warnings
@@ -20,10 +19,9 @@ bond_params = loadfn(os.path.join(MODULE_DIR, "DLS_bond_params.yaml"))
 
 
 def _is_ox(structure):
-    comp = structure.composition
-    for k in comp:
+    for elem in structure.composition:
         try:
-            k.oxi_state
+            elem.oxi_state
         except AttributeError:
             return False
     return True
@@ -60,10 +58,10 @@ class RLSVolumePredictor:
             structure (Structure): structure w/unknown volume
             ref_structure (Structure): A reference structure with a similar
                 structure but different species.
+
         Returns:
             a float value of the predicted volume
         """
-
         if self.check_isostructural:
             m = StructureMatcher()
             mapping = m.get_best_electronegativity_anonymous_mapping(structure, ref_structure)
@@ -125,10 +123,12 @@ class RLSVolumePredictor:
         """
         Given a structure, returns back the structure scaled to predicted
         volume.
+
         Args:
             structure (Structure): structure w/unknown volume
             ref_structure (Structure): A reference structure with a similar
                 structure but different species.
+
         Returns:
             a Structure object with predicted volume
         """
@@ -179,7 +179,6 @@ class DLSVolumePredictor:
         Returns:
             a float value of the predicted volume.
         """
-
         # Get standard deviation of electronnegativity in the structure.
         std_x = np.std([site.specie.X for site in structure])
         # Sites that have atomic radii
@@ -239,6 +238,7 @@ class DLSVolumePredictor:
         """
         Given a structure, returns back the structure scaled to predicted
         volume.
+
         Args:
             structure (Structure): structure w/unknown volume
 

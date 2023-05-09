@@ -1,17 +1,10 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
 """
 This module provides conversion between the Atomic Simulation Environment
 Atoms object and pymatgen Structure objects.
 """
 
 
-__author__ = "Shyue Ping Ong, Andrew S. Rosen"
-__copyright__ = "Copyright 2012, The Materials Project"
-__version__ = "1.0"
-__maintainer__ = "Shyue Ping Ong"
-__email__ = "shyuep@gmail.com"
-__date__ = "Mar 8, 2012"
+from __future__ import annotations
 
 import warnings
 
@@ -29,6 +22,13 @@ except ImportError:
 if ase_loaded:
     from ase.calculators.singlepoint import SinglePointDFTCalculator
     from ase.constraints import FixAtoms
+
+__author__ = "Shyue Ping Ong, Andrew S. Rosen"
+__copyright__ = "Copyright 2012, The Materials Project"
+__version__ = "1.0"
+__maintainer__ = "Shyue Ping Ong"
+__email__ = "shyuep@gmail.com"
+__date__ = "Mar 8, 2012"
 
 
 class AseAtomsAdaptor:
@@ -83,21 +83,15 @@ class AseAtomsAdaptor:
             initial_charges = structure.site_properties["charge"]
             atoms.set_initial_charges(initial_charges)
 
-        if "final_magmom" in structure.site_properties:
-            magmoms = structure.site_properties["final_magmom"]
-        else:
-            magmoms = None
-        if "final_charge" in structure.site_properties:
-            charges = structure.site_properties["final_charge"]
-        else:
-            charges = None
+        magmoms = structure.site_properties["final_magmom"] if "final_magmom" in structure.site_properties else None
+        charges = structure.site_properties["final_charge"] if "final_charge" in structure.site_properties else None
         if magmoms or charges:
             if magmoms and charges:
-                calc = SinglePointDFTCalculator(atoms, **{"magmoms": magmoms, "charges": charges})
+                calc = SinglePointDFTCalculator(atoms, magmoms=magmoms, charges=charges)
             elif magmoms:
-                calc = SinglePointDFTCalculator(atoms, **{"magmoms": magmoms})
+                calc = SinglePointDFTCalculator(atoms, magmoms=magmoms)
             elif charges:
-                calc = SinglePointDFTCalculator(atoms, **{"charges": charges})
+                calc = SinglePointDFTCalculator(atoms, charges=charges)
             atoms.calc = calc
 
         # Get the oxidation states from the structure
@@ -147,7 +141,6 @@ class AseAtomsAdaptor:
         Returns:
             Equivalent pymatgen.core.structure.Structure
         """
-
         cls = Structure if cls is None else cls
 
         symbols = atoms.get_chemical_symbols()
@@ -156,24 +149,15 @@ class AseAtomsAdaptor:
 
         # Get the site magmoms from the ASE Atoms objects.
         if getattr(atoms, "calc", None) is not None and getattr(atoms.calc, "results", None) is not None:
-            magmoms = atoms.calc.results.get("magmoms", None)
-            charges = atoms.calc.results.get("charges", None)
+            magmoms = atoms.calc.results.get("magmoms")
+            charges = atoms.calc.results.get("charges")
         else:
             magmoms = None
             charges = None
 
-        if atoms.has("initial_magmoms"):
-            initial_magmoms = atoms.get_initial_magnetic_moments()
-        else:
-            initial_magmoms = None
-        if atoms.has("initial_charges"):
-            initial_charges = atoms.get_initial_charges()
-        else:
-            initial_charges = None
-        if atoms.has("oxi_states"):
-            oxi_states = atoms.get_array("oxi_states")
-        else:
-            oxi_states = None
+        initial_magmoms = atoms.get_initial_magnetic_moments() if atoms.has("initial_magmoms") else None
+        initial_charges = atoms.get_initial_charges() if atoms.has("initial_charges") else None
+        oxi_states = atoms.get_array("oxi_states") if atoms.has("oxi_states") else None
 
         # If the ASE Atoms object has constraints, make sure that they are of the
         # kind FixAtoms, which are the only ones that can be supported in Pymatgen.
@@ -252,17 +236,10 @@ class AseAtomsAdaptor:
         Returns:
             Equivalent pymatgen.core.structure.Molecule
         """
-
         cls = Molecule if cls is None else cls
         molecule = AseAtomsAdaptor.get_structure(atoms, cls=cls, **cls_kwargs)
-        if atoms.has("initial_charges"):
-            charge = round(np.sum(atoms.get_initial_charges()))
-        else:
-            charge = 0
-        if atoms.has("initial_magmoms"):
-            mult = round(np.sum(atoms.get_initial_magnetic_moments())) + 1
-        else:
-            mult = 1
+        charge = round(np.sum(atoms.get_initial_charges())) if atoms.has("initial_charges") else 0
+        mult = round(np.sum(atoms.get_initial_magnetic_moments())) + 1 if atoms.has("initial_magmoms") else 1
         molecule.set_charge_and_spin(charge, spin_multiplicity=mult)
 
         return molecule

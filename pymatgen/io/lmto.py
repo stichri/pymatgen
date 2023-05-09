@@ -1,4 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
 # Distributed under the terms of the MIT License
 
 """
@@ -7,6 +6,8 @@ LMTO-ASA code. It will primarily be used to generate a pymatgen
 Structure object in the pymatgen.electronic_structure.cohp.py module.
 """
 
+
+from __future__ import annotations
 
 import re
 
@@ -48,7 +49,9 @@ class LMTOCtrl:
         self.header = header
         self.version = version
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
         return self.get_string() == other.get_string()
 
     def __repr__(self):
@@ -66,7 +69,7 @@ class LMTOCtrl:
     def get_string(self, sigfigs=8):
         """
         Generates the string representation of the CTRL file. This is
-        the mininmal CTRL file necessary to execute lmhart.run.
+        the minimal CTRL file necessary to execute lmhart.run.
         """
         ctrl_dict = self.as_dict()
         lines = [] if "HEADER" not in ctrl_dict else ["HEADER".ljust(10) + self.header]
@@ -74,23 +77,17 @@ class LMTOCtrl:
             lines.append("VERS".ljust(10) + self.version)
 
         lines.append("STRUC".ljust(10) + "ALAT=" + str(round(ctrl_dict["ALAT"], sigfigs)))
-        for l, latt in enumerate(ctrl_dict["PLAT"]):
-            if l == 0:
-                line = "PLAT=".rjust(15)
-            else:
-                line = " ".ljust(15)
-            line += " ".join([str(round(v, sigfigs)) for v in latt])
+        for idx, latt in enumerate(ctrl_dict["PLAT"]):
+            line = "PLAT=".rjust(15) if idx == 0 else " ".ljust(15)
+            line += " ".join(str(round(v, sigfigs)) for v in latt)
             lines.append(line)
 
         for cat in ["CLASS", "SITE"]:
             for a, atoms in enumerate(ctrl_dict[cat]):
-                if a == 0:
-                    line = [cat.ljust(9)]
-                else:
-                    line = [" ".ljust(9)]
+                line = [cat.ljust(9)] if a == 0 else [" ".ljust(9)]
                 for token, val in sorted(atoms.items()):
                     if token == "POS":
-                        line.append("POS=" + " ".join([str(round(p, sigfigs)) for p in val]))
+                        line.append("POS=" + " ".join(str(round(p, sigfigs)) for p in val))
                     else:
                         line.append(token + "=" + str(val))
                 line = " ".join(line)
@@ -118,14 +115,12 @@ class LMTOCtrl:
         sga = SpacegroupAnalyzer(self.structure)
         alat = sga.get_conventional_standard_structure().lattice.a
         plat = self.structure.lattice.matrix / alat
-
         """
         The following is to find the classes (atoms that are not symmetry
         equivalent, and create labels. Note that LMTO only attaches
         numbers with the second atom of the same species, e.g. "Bi", "Bi1",
         "Bi2", etc.
         """
-
         eq_atoms = sga.get_symmetry_dataset()["equivalent_atoms"]
         ineq_sites_index = list(set(eq_atoms))
         sites = []
@@ -341,7 +336,6 @@ class LMTOCopl:
             to_eV: LMTO-ASA gives energies in Ry. To convert energies into
               eV, set to True. Defaults to False for energies in Ry.
         """
-
         # COPL files have an extra trailing blank line
         with zopen(filename, "rt") as f:
             contents = f.read().split("\n")[:-1]
@@ -415,7 +409,6 @@ class LMTOCopl:
             The bond label, the bond length and a tuple of the site
             indices.
         """
-
         line = line.split()
         length = float(line[2])
         # Replacing "/" with "-" makes splitting easier

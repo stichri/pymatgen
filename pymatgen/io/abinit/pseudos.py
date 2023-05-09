@@ -1,9 +1,9 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
 """
 This module provides objects describing the basic parameters of the
 pseudopotentials used in Abinit, and a parser to instantiate pseudopotential objects..
 """
+
+from __future__ import annotations
 
 import abc
 import collections
@@ -26,7 +26,6 @@ from tabulate import tabulate
 from pymatgen.core.periodic_table import Element
 from pymatgen.core.xcfunc import XcFunc
 from pymatgen.util.plotting import add_fig_kwargs, get_ax_fig_plt
-from pymatgen.util.serialization import pmg_serialize
 
 logger = logging.getLogger(__name__)
 
@@ -68,25 +67,17 @@ def _read_nlines(filename, nlines):
         return lines
 
 
-_l2str = {
-    0: "s",
-    1: "p",
-    2: "d",
-    3: "f",
-    4: "g",
-    5: "h",
-    6: "i",
-}
+_l2str = {0: "s", 1: "p", 2: "d", 3: "f", 4: "g", 5: "h", 6: "i"}
 
 _str2l = {v: k for k, v in _l2str.items()}
 
 
-def l2str(l):
+def l2str(l_ang_mom):
     """Convert the angular momentum l (int) to string."""
     try:
-        return _l2str[l]
+        return _l2str[l_ang_mom]
     except KeyError:
-        return f"Unknown angular momentum, received l = {l}"
+        return f"Unknown angular momentum, received {l_ang_mom = }"
 
 
 def str2l(s):
@@ -97,7 +88,7 @@ def str2l(s):
 class Pseudo(MSONable, metaclass=abc.ABCMeta):
     """
     Abstract base class defining the methods that must be
-    implemented by the concrete pseudopotential sub-classes.
+    implemented by the concrete pseudo-potential sub-classes.
     """
 
     @classmethod
@@ -250,21 +241,22 @@ class Pseudo(MSONable, metaclass=abc.ABCMeta):
         Base classes should provide a concrete implementation that computes this value.
         """
 
-    @pmg_serialize
     def as_dict(self, **kwargs):
         """Return dictionary for MSONable protocol."""
         # pylint: disable=E1101
-        return dict(
-            basename=self.basename,
-            type=self.type,
-            symbol=self.symbol,
-            Z=self.Z,
-            Z_val=self.Z_val,
-            l_max=self.l_max,
-            md5=self.md5,
-            filepath=self.filepath,
-            # xc=self.xc.as_dict(),
-        )
+        return {
+            "@module": type(self).__module__,
+            "@class": type(self).__name__,
+            "basename": self.basename,
+            "type": self.type,
+            "symbol": self.symbol,
+            "Z": self.Z,
+            "Z_val": self.Z_val,
+            "l_max": self.l_max,
+            "md5": self.md5,
+            "filepath": self.filepath,
+            # "xc": self.xc.as_dict(),
+        }
 
     @classmethod
     def from_dict(cls, d):
@@ -484,7 +476,7 @@ class AbinitPseudo(Pseudo):
         self.xc = XcFunc.from_abinit_ixc(header["pspxc"])
 
         for attr_name in header:
-            value = header.get(attr_name, None)
+            value = header.get(attr_name)
 
             # Hide these attributes since one should always use the public interface.
             setattr(self, "_" + attr_name, value)
@@ -596,10 +588,14 @@ class Hint:
             return f"ecut: {self.ecut}, pawecutdg: {self.pawecutdg}"
         return f"ecut: {self.ecut}"
 
-    @pmg_serialize
     def as_dict(self):
         """Return dictionary for MSONable protocol."""
-        return dict(ecut=self.ecut, pawecutdg=self.pawecutdg)
+        return {
+            "@module": type(self).__module__,
+            "@class": type(self).__name__,
+            "ecut": self.ecut,
+            "pawecutdg": self.pawecutdg,
+        }
 
     @classmethod
     def from_dict(cls, d):
@@ -630,12 +626,11 @@ def _dict_from_lines(lines, key_nums, sep=None):
         key_nums = list(key_nums)
 
     if len(lines) != len(key_nums):
-        err_msg = f"lines = {lines}\n key_num =  {key_nums}"
-        raise ValueError(err_msg)
+        raise ValueError(f"{lines = }\n{key_nums = }")
 
     kwargs = Namespace()
 
-    for (i, nk) in enumerate(key_nums):
+    for i, nk in enumerate(key_nums):
         if nk == 0:
             continue
         line = lines[i]
@@ -666,7 +661,7 @@ class AbinitHeader(dict):
 
     def __getattr__(self, name):
         try:
-            # Default behaviour
+            # Default behavior
             return super().__getattribute__(name)
         except AttributeError:
             try:
@@ -1128,7 +1123,6 @@ class PseudoParser:
         lines = _read_nlines(filename, 80)
 
         for lineno, line in enumerate(lines):
-
             if lineno == 2:
                 try:
                     tokens = line.split()
@@ -1412,7 +1406,7 @@ class PawXmlSetup(Pseudo, PawPseudo):
     def pseudo_partial_waves(self):
         """Dictionary with the pseudo partial waves indexed by state."""
         pseudo_partial_waves = {}
-        for (mesh, values, attrib) in self._parse_all_radfuncs("pseudo_partial_wave"):
+        for mesh, values, attrib in self._parse_all_radfuncs("pseudo_partial_wave"):
             state = attrib["state"]
             # val_state = self.valence_states[state]
             pseudo_partial_waves[state] = RadialFunction(mesh, values)
@@ -1423,7 +1417,7 @@ class PawXmlSetup(Pseudo, PawPseudo):
     def projector_functions(self):
         """Dictionary with the PAW projectors indexed by state."""
         projector_functions = {}
-        for (mesh, values, attrib) in self._parse_all_radfuncs("projector_function"):
+        for mesh, values, attrib in self._parse_all_radfuncs("projector_function"):
             state = attrib["state"]
             # val_state = self.valence_states[state]
             projector_functions[state] = RadialFunction(mesh, values)
@@ -1562,7 +1556,7 @@ class PawXmlSetup(Pseudo, PawPseudo):
     #    return fig
 
 
-class PseudoTable(collections.abc.Sequence, MSONable, metaclass=abc.ABCMeta):
+class PseudoTable(collections.abc.Sequence, MSONable):
     """
     Define the pseudopotentials from the element table.
     Individidual elements are accessed by name, symbol or atomic number.
@@ -1736,18 +1730,15 @@ class PseudoTable(collections.abc.Sequence, MSONable, metaclass=abc.ABCMeta):
                 pseudos.append(dec.process_decoded(v))
         return cls(pseudos)
 
-    def is_complete(self, zmax=118):
+    def is_complete(self, zmax=118) -> bool:
         """
         True if table is complete i.e. all elements with Z < zmax have at least on pseudopotential
         """
-        for z in range(1, zmax):
-            if not self[z]:
-                return False
-        return True
+        return all(self[z] for z in range(1, zmax))
 
     def all_combinations_for_elements(self, element_symbols):
         """
-        Return a list with all the the possible combination of pseudos
+        Return a list with all the possible combination of pseudos
         for the given list of element_symbols.
         Each item is a list of pseudopotential objects.
 
@@ -1826,9 +1817,8 @@ class PseudoTable(collections.abc.Sequence, MSONable, metaclass=abc.ABCMeta):
             if exclude:
                 if p.symbol in symbols:
                     continue
-            else:
-                if p.symbol not in symbols:
-                    continue
+            elif p.symbol not in symbols:
+                continue
 
             pseudos.append(p)
 
@@ -1897,14 +1887,15 @@ class PseudoTable(collections.abc.Sequence, MSONable, metaclass=abc.ABCMeta):
         """Return a new :class:`PseudoTable` with pseudos sorted by Z"""
         return self.__class__(sorted(self, key=lambda p: p.Z))
 
-    def select(self, condition):
-        """
-        Select only those pseudopotentials for which condition is True.
-        Return new class:`PseudoTable` object.
+    def select(self, condition) -> PseudoTable:
+        """Select only those pseudopotentials for which condition is True.
 
         Args:
             condition:
                 Function that accepts a :class:`Pseudo` object and returns True or False.
+
+        Returns:
+            PseudoTable: New PseudoTable instance with pseudos for which condition is True.
         """
         return self.__class__([p for p in self if condition(p)])
 

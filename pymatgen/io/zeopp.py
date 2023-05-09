@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 Module implementing classes and functions to use Zeo++
 by Maciej Haranczyk.
@@ -24,6 +21,8 @@ b) Go to pymatgen/analysis/defects/tests and run
    "python test_point_defects.py". Lots of tests will be skipped if GULP
    is not installed. But there should be no errors.
 """
+
+from __future__ import annotations
 
 import os
 import re
@@ -59,7 +58,7 @@ class ZeoCssr(Cssr):
     ZeoCssr adds extra fields to CSSR sites to conform with Zeo++
     input CSSR format. The coordinate system is rotated from xyz to zyx.
     This change aligns the pivot axis of pymatgen (z-axis) to pivot axis
-    of Zeo++ (x-axis) for structurural modifications.
+    of Zeo++ (x-axis) for structural modifications.
     """
 
     def __init__(self, structure):
@@ -71,7 +70,7 @@ class ZeoCssr(Cssr):
 
     def __str__(self):
         """
-        CSSR.__str__ method is modified to padd 0's to the CSSR site data.
+        CSSR.__str__ method is modified to pad 0's to the CSSR site data.
         The padding is to conform with the CSSR format supported Zeo++.
         The oxidation state is stripped from site.specie
         Also coordinate system is rotated from xyz to zxy
@@ -117,10 +116,10 @@ class ZeoCssr(Cssr):
         sp = []
         coords = []
         chrg = []
-        for l in lines[4:]:
+        for line in lines[4:]:
             m = re.match(
-                r"\d+\s+(\w+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+" + r"([0-9\-\.]+)\s+(?:0\s+){8}([0-9\-\.]+)",
-                l.strip(),
+                r"\d+\s+(\w+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+(?:0\s+){8}([0-9\-\.]+)",
+                line.strip(),
             )
             if m:
                 sp.append(m.group(1))
@@ -176,7 +175,7 @@ class ZeoVoronoiXYZ(XYZ):
         coords = []
         sp = []
         prop = []
-        coord_patt = re.compile(r"(\w+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+" + r"([0-9\-\.]+)")
+        coord_patt = re.compile(r"(\w+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)\s+([0-9\-\.]+)")
         for i in range(2, 2 + num_sites):
             m = coord_patt.search(lines[i])
             if m:
@@ -241,7 +240,6 @@ def get_voronoi_nodes(structure, rad_dict=None, probe_rad=0.1):
         voronoi face centers as pymatgen.core.structure.Structure within the
         unit cell defined by the lattice of input structure
     """
-
     with ScratchDir("."):
         name = "temp_zeo1"
         zeo_inp_filename = name + ".cssr"
@@ -333,7 +331,6 @@ def get_high_accuracy_voronoi_nodes(structure, rad_dict, probe_rad=0.1):
         voronoi face centers as pymatgen.core.structure.Structure within the
         unit cell defined by the lattice of input structure
     """
-
     with ScratchDir("."):
         name = "temp_zeo1"
         zeo_inp_filename = name + ".cssr"
@@ -399,7 +396,6 @@ def get_free_sphere_params(structure, rad_dict=None, probe_rad=0.1):
         voronoi face centers as pymatgen.core.structure.Structure within the
         unit cell defined by the lattice of input structure
     """
-
     with ScratchDir("."):
         name = "temp_zeo1"
         zeo_inp_filename = name + ".cssr"

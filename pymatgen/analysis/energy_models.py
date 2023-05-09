@@ -1,11 +1,10 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module implements a EnergyModel abstract class and some basic
 implementations. Basically, an EnergyModel is any model that returns an
 "energy" for any given structure.
 """
+
+from __future__ import annotations
 
 import abc
 
@@ -107,7 +106,7 @@ class SymmetryModel(EnergyModel):
     :class:`pymatgen.symmetry.finder.SpacegroupAnalyzer`.
     """
 
-    def __init__(self, symprec=0.1, angle_tolerance=5):
+    def __init__(self, symprec: float = 0.1, angle_tolerance=5):
         """
         Args:
             symprec (float): Symmetry tolerance. Defaults to 0.1.

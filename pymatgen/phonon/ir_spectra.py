@@ -1,11 +1,11 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
 """
 This module provides classes to handle the calculation of the IR spectra
 This implementation is adapted from Abipy
 https://github.com/abinit/abipy
 where it was originally done by Guido Petretto and Matteo Giantomassi
 """
+
+from __future__ import annotations
 
 import numpy as np
 from monty.json import MSONable
@@ -173,7 +173,6 @@ class IRDielectricTensor(MSONable):
             emin, emax: minimum and maximum energy in which to obtain the spectra
             divs: number of frequency samples between emin and emax
         """
-
         directions_map = {"x": 0, "y": 1, "z": 2, 0: 0, 1: 1, 2: 2}
         reim_label = {"re": "Re", "im": "Im"}
 

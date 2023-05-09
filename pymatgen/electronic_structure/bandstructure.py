@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes to define everything related to band structures.
 """
@@ -149,7 +146,6 @@ class Kpoint(MSONable):
         Returns:
             A Kpoint object
         """
-
         return cls(
             coords=d["fcoords"],
             lattice=Lattice.from_dict(d["lattice"]),
@@ -209,8 +205,8 @@ class BandStructure:
         efermi: float,
         labels_dict=None,
         coords_are_cartesian: bool = False,
-        structure: Structure = None,
-        projections: dict[Spin, np.ndarray] = None,
+        structure: Structure | None = None,
+        projections: dict[Spin, np.ndarray] | None = None,
     ) -> None:
         """
         Args:
@@ -326,12 +322,11 @@ class BandStructure:
                 sp = structure[k].specie
                 for orb_i in range(len(v[i][j])):
                     o = Orbital(orb_i).name[0]
-                    if sp in el_orb_spec:
-                        if o in el_orb_spec[sp]:
-                            result[spin][i][j][str(sp)][o] += v[i][j][orb_i][k]
+                    if sp in el_orb_spec and o in el_orb_spec[sp]:
+                        result[spin][i][j][str(sp)][o] += v[i][j][orb_i][k]
         return result
 
-    def is_metal(self, efermi_tol=1e-4):
+    def is_metal(self, efermi_tol=1e-4) -> bool:
         """
         Check if the band structure indicates a metal by looking if the fermi
         level crosses a band.
@@ -494,7 +489,7 @@ class BandStructure:
             return {"energy": 0.0, "direct": False, "transition": None}
         cbm = self.get_cbm()
         vbm = self.get_vbm()
-        result = dict(direct=False, energy=0.0, transition=None)
+        result = {"direct": False, "energy": 0.0, "transition": None}
 
         result["energy"] = cbm["energy"] - vbm["energy"]
 
@@ -507,7 +502,7 @@ class BandStructure:
             [
                 str(c.label)
                 if c.label is not None
-                else "(" + ",".join([f"{c.frac_coords[i]:.3f}" for i in range(3)]) + ")"
+                else "(" + ",".join(f"{c.frac_coords[i]:.3f}" for i in range(3)) + ")"
                 for c in [vbm["kpoint"], cbm["kpoint"]]
             ]
         )
@@ -556,7 +551,7 @@ class BandStructure:
         dg = self.get_direct_band_gap_dict()
         return min(v["value"] for v in dg.values())
 
-    def get_sym_eq_kpoints(self, kpoint, cartesian=False, tol=1e-2):
+    def get_sym_eq_kpoints(self, kpoint, cartesian=False, tol: float = 1e-2):
         """
         Returns a list of unique symmetrically equivalent k-points.
 
@@ -582,7 +577,7 @@ class BandStructure:
                     break
         return np.delete(points, rm_list, axis=0)
 
-    def get_kpoint_degeneracy(self, kpoint, cartesian=False, tol=1e-2):
+    def get_kpoint_degeneracy(self, kpoint, cartesian=False, tol: float = 1e-2):
         """
         Returns degeneracy of a given k-point based on structure symmetry
         Args:
@@ -699,6 +694,7 @@ class BandStructure:
         Args:
             d (dict): A dict with all data for a band structure symm line
                 object.
+
         Returns:
             A BandStructureSymmLine object
         """
@@ -711,15 +707,15 @@ class BandStructure:
             projections = {}
             for spin in d["projections"]:
                 dd = []
-                for i in range(len(d["projections"][spin])):
+                for ii in range(len(d["projections"][spin])):
                     ddd = []
-                    for j in range(len(d["projections"][spin][i])):
+                    for jj in range(len(d["projections"][spin][ii])):
                         dddd = []
-                        for k in range(len(d["projections"][spin][i][j])):
+                        for kk in range(len(d["projections"][spin][ii][jj])):
                             ddddd = []
-                            orb = Orbital(k).name
-                            for l in range(len(d["projections"][spin][i][j][orb])):
-                                ddddd.append(d["projections"][spin][i][j][orb][l])
+                            orb = Orbital(kk).name
+                            for ll in range(len(d["projections"][spin][ii][jj][orb])):
+                                ddddd.append(d["projections"][spin][ii][jj][orb][ll])
                             dddd.append(np.array(ddddd))
                         ddd.append(np.array(dddd))
                     dd.append(np.array(ddd))
@@ -806,11 +802,10 @@ class BandStructureSymmLine(BandStructure, MSONable):
                 self.distance.append(np.linalg.norm(kpt.cart_coords - previous_kpoint.cart_coords) + previous_distance)
             previous_kpoint = kpt
             previous_distance = self.distance[i]
-            if label:
-                if previous_label:
-                    if len(one_group) != 0:
-                        branches_tmp.append(one_group)
-                    one_group = []
+            if label and previous_label:
+                if len(one_group) != 0:
+                    branches_tmp.append(one_group)
+                one_group = []
             previous_label = label
             one_group.append(i)
 
@@ -909,10 +904,9 @@ class BandStructureSymmLine(BandStructure, MSONable):
                         below = True
                     if self.bands[Spin.up][i][j] > self.efermi:
                         above = True
-                if above and below:
-                    if i > max_index:
-                        max_index = i
-                        # spin_index = Spin.up
+                if above and below and i > max_index:
+                    max_index = i
+                    # spin_index = Spin.up
                 if self.is_spin_polarized:
                     below = False
                     above = False
@@ -921,10 +915,9 @@ class BandStructureSymmLine(BandStructure, MSONable):
                             below = True
                         if self.bands[Spin.down][i][j] > self.efermi:
                             above = True
-                    if above and below:
-                        if i > max_index:
-                            max_index = i
-                            # spin_index = Spin.down
+                    if above and below and i > max_index:
+                        max_index = i
+                        # spin_index = Spin.down
             old_dict = self.as_dict()
             shift = new_band_gap
             for spin in old_dict["bands"]:
@@ -933,7 +926,6 @@ class BandStructureSymmLine(BandStructure, MSONable):
                         if k >= max_index:
                             old_dict["bands"][spin][k][v] = old_dict["bands"][spin][k][v] + shift
         else:
-
             shift = new_band_gap - self.get_band_gap()["energy"]
             old_dict = self.as_dict()
             for spin in old_dict["bands"]:
@@ -962,7 +954,6 @@ class LobsterBandStructureSymmLine(BandStructureSymmLine):
         """
         JSON-serializable dict representation of BandStructureSymmLine.
         """
-
         d = {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
@@ -1048,6 +1039,7 @@ class LobsterBandStructureSymmLine(BandStructureSymmLine):
         Args:
             d (dict): A dict with all data for a band structure symm line
                 object.
+
         Returns:
             A BandStructureSymmLine object
         """
@@ -1129,9 +1121,8 @@ class LobsterBandStructureSymmLine(BandStructureSymmLine):
                 for key, item in v[i][j].items():
                     for key2, item2 in item.items():
                         specie = str(Element(re.split(r"[0-9]+", key)[0]))
-                        if get_el_sp(str(specie)) in el_orb_spec:
-                            if key2 in el_orb_spec[get_el_sp(str(specie))]:
-                                result[spin][i][j][specie][key2] += item2
+                        if get_el_sp(str(specie)) in el_orb_spec and key2 in el_orb_spec[get_el_sp(str(specie))]:
+                            result[spin][i][j][specie][key2] += item2
         return result
 
 

@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 Entries are containers for calculated information, which is used in
 many analyses. This module contains entry related tools and implements
@@ -41,7 +38,7 @@ class Entry(MSONable, metaclass=ABCMeta):
         self,
         composition: Composition | str | dict[str, float],
         energy: float,
-    ):
+    ) -> None:
         """
         Initializes an Entry.
 
@@ -78,6 +75,7 @@ class Entry(MSONable, metaclass=ABCMeta):
         """
         :return: the energy of the entry.
         """
+        raise NotImplementedError
 
     @property
     def energy_per_atom(self) -> float:
@@ -89,9 +87,6 @@ class Entry(MSONable, metaclass=ABCMeta):
     def __repr__(self):
         return f"{type(self).__name__} : {self.composition} with energy = {self.energy:.4f}"
 
-    def __str__(self):
-        return self.__repr__()
-
     def normalize(self, mode: Literal["formula_unit", "atom"] = "formula_unit") -> Entry:
         """
         Normalize the entry's composition and energy.
@@ -100,7 +95,6 @@ class Entry(MSONable, metaclass=ABCMeta):
             mode ("formula_unit" | "atom"): "formula_unit" (the default) normalizes to composition.reduced_formula.
                 "atom" normalizes such that the composition amounts sum to 1.
         """
-
         factor = self._normalization_factor(mode)
         new_composition = self._composition / factor
         new_energy = self._energy / factor
@@ -125,9 +119,7 @@ class Entry(MSONable, metaclass=ABCMeta):
         return factor
 
     def as_dict(self) -> dict:
-        """
-        :return: MSONable dict.
-        """
+        """MSONable dict."""
         return {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
@@ -135,7 +127,9 @@ class Entry(MSONable, metaclass=ABCMeta):
             "composition": self._composition.as_dict(),
         }
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
         # NOTE: Scaled duplicates i.e. physically equivalent materials
         # are not equal unless normalized separately.
         if self is other:

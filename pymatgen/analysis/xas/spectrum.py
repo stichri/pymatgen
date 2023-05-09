@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module defines classes to represent all xas and stitching methods
 """
@@ -77,7 +74,6 @@ class XAS(Spectrum):
         """
         Initializes a spectrum object.
         """
-
         super().__init__(x, y, structure, absorbing_element, edge)
         self.structure = structure
         self.absorbing_element = absorbing_element

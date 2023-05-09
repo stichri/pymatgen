@@ -1,9 +1,6 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module defines the abstract interface for reading and writing calculation
-inputs in pymatgen. The interface comprises a 3-tiered hierarchy of clases.
+inputs in pymatgen. The interface comprises a 3-tiered hierarchy of classes.
 
 1. An InputFile object represents the contents of a single input file, e.g.
    the INCAR. This class standardizes file read and write operations.
@@ -68,7 +65,6 @@ class InputFile(MSONable):
 
         Args:
             filename: The filename to output to, including path.
-            kwargs: Keyword arguments passed to get_string()
         """
         filename = filename if isinstance(filename, Path) else Path(filename)
         with zopen(filename, "wt") as f:
@@ -102,6 +98,9 @@ class InputFile(MSONable):
         with zopen(filename, "rt") as f:
             return cls.from_string(f.read())
 
+    def __str__(self):
+        return self.get_string()
+
 
 class InputSet(MSONable, MutableMapping):
     """
@@ -117,7 +116,7 @@ class InputSet(MSONable, MutableMapping):
     is optional.
     """
 
-    def __init__(self, inputs: dict[str | Path, str | InputFile] = None, **kwargs):
+    def __init__(self, inputs: dict[str | Path, str | InputFile] | None = None, **kwargs):
         """
         Instantiate an InputSet.
 
@@ -139,7 +138,28 @@ class InputSet(MSONable, MutableMapping):
         # allow accessing keys as attributes
         if k in self._kwargs:
             return self.get(k)
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{k}'")
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute {k!r}")
+
+    def __copy__(self) -> InputSet:
+        cls = self.__class__
+        new_instance = cls.__new__(cls)
+
+        for k, v in self.__dict__.items():
+            setattr(new_instance, k, v)
+
+        return new_instance
+
+    def __deepcopy__(self, memo: dict[int, InputSet]) -> InputSet:
+        import copy
+
+        cls = self.__class__
+        new_instance = cls.__new__(cls)
+        memo[id(self)] = new_instance
+
+        for k, v in self.__dict__.items():
+            setattr(new_instance, k, copy.deepcopy(v, memo))
+
+        return new_instance
 
     def __len__(self):
         return len(self.inputs)
@@ -155,9 +175,6 @@ class InputSet(MSONable, MutableMapping):
 
     def __delitem__(self, key):
         del self.inputs[key]
-
-    def __eq__(self, other):
-        return (self.inputs == other.inputs) and (self.__dict__ == other.__dict__)
 
     def write_input(
         self,
@@ -182,9 +199,8 @@ class InputSet(MSONable, MutableMapping):
         for fname, contents in self.inputs.items():
             file = path / fname
 
-            if not path.exists():
-                if make_dir:
-                    path.mkdir(parents=True, exist_ok=True)
+            if not path.exists() and make_dir:
+                path.mkdir(parents=True, exist_ok=True)
 
             if file.exists() and not overwrite:
                 raise FileExistsError(f"File {str(fname)} already exists!")

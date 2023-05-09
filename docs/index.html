@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Introduction &mdash; pymatgen 2022.7.25 documentation</title>
+  <title>Introduction &mdash; pymatgen 2023.3.23 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
@@ -14,15 +14,14 @@
   <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Introduction" href="introduction.html" />
  
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <script type="text/javascript">
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-33990148-1']);
@@ -36,14 +35,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: linear-gradient(0deg, rgba(23,63,162,1) 0%, rgba(0,70,192,1) 100%)" >
-            <a href="#" class="icon icon-home"> pymatgen
+
+          
+          
+          <a href="#">
+            
           </a>
               <div class="version">
-                2022.7.25
+                2023.3.23
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -74,8 +77,8 @@
         <div class="rst-content style-external-links">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
-      <li>Introduction</li>
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Introduction</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/materialsproject/pymatgen/blob/master/docs_rst/index.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -87,7 +90,7 @@
              
   <div class="toctree-wrapper compound">
 </div>
-<a class="reference internal image-reference" href="_images/pymatgen.png"><img alt="pymatgen" class="align-center" src="_images/pymatgen.png" style="width: 300px;" /></a>
+<a class="reference internal image-reference" href="_images/pymatgen.svg"><img alt="pymatgen" class="align-center" src="_images/pymatgen.svg" width="300px" /></a>
 <section id="introduction">
 <h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading"></a></h1>
 <a class="reference external image-reference" href="https://github.com/materialsproject/pymatgen/actions/workflows/test.yml"><img alt="CI Status" src="https://github.com/materialsproject/pymatgen/actions/workflows/test.yml/badge.svg" /></a>
@@ -120,7 +123,7 @@ reports. The following are resources for pymatgen:</p>
 <li><p>Bug reports or feature requests: Please submit a <a class="reference external" href="http://github.com/materialsproject/pymatgen/issues">GitHub Issue</a>.</p></li>
 <li><p>Code contributions via <a class="reference external" href="https://github.com/materialsproject/pymatgen/pulls">pull requests</a> welcome.</p></li>
 <li><p>For help with usage that are unrelated to bugs or feature requests, please use the pymatgen <a class="reference external" href="https://discuss.matsci.org/c/pymatgen">Discourse page</a>.</p></li>
-<li><p><a class="reference external" href="http://matgenb.materialsvirtuallab.org">matgenb</a> provides some Jupyter notebooks demonstrating functionality.</p></li>
+<li><p><a class="reference external" href="https://github.com/materialsvirtuallab/matgenb#introduction">matgenb</a> provides some Jupyter notebooks demonstrating functionality.</p></li>
 <li><p>Follow us on <a class="reference external" href="http://twitter.com/pymatgen">Twitter</a> to get news and tips.</p>
 <blockquote>
 <div><p><em>The code is mightier than the pen.</em></p>
@@ -169,7 +172,7 @@ demonstrates some of the basic functionality of pymatgen, as well as a
 One of the ways you can contribute is to fork the matgenb repo and add your own examples.</p>
 <p>Below are a quick look at some of the graphical output possible.</p>
 <figure class="align-center" id="id2">
-<a class="reference internal image-reference" href="_images/examples.png"><img alt="Examples" src="_images/examples.png" style="width: 100%;" /></a>
+<a class="reference internal image-reference" href="_images/phase_diagram.png"><img alt="Examples" src="_images/phase_diagram.png" style="width: 100%;" /></a>
 <figcaption>
 <p><span class="caption-text">Top: (left) Phase and (right) Pourbaix diagram from the Materials API.
 Bottom left: Calculated bandstructure plot using pymatgen’s parsing and
@@ -208,10 +211,88 @@ details and examples.</p></li>
 </section>
 <section id="change-log">
 <h2>Change log<a class="headerlink" href="#change-log" title="Permalink to this heading"></a></h2>
-<section id="v2022-7-25">
-<h3>v2022.7.25<a class="headerlink" href="#v2022-7-25" title="Permalink to this heading"></a></h3>
+<section id="v2023-5-8">
+<h3>v2023.5.8<a class="headerlink" href="#v2023-5-8" title="Permalink to this heading"></a></h3>
 <ul class="simple">
-<li><p>Implemented sufficient methods for new MPRester to cover about 70-80% of common use cases.</p></li>
+<li><dl class="simple">
+<dt>PR #2959 from &#64;materialsproject dependabot/github_actions/pypa/cibuildwheel-2.12.3</dt><dd><p>Bumps [pypa/cibuildwheel](<a class="reference external" href="https://github.com/pypa/cibuildwheel">https://github.com/pypa/cibuildwheel</a>) from 2.11.4 to 2.12.3.
+&lt;details&gt;
+&lt;summary&gt;Release notes&lt;/summary&gt;
+&lt;p&gt;&lt;em&gt;Sourced from &lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/releases">https://github.com/pypa/cibuildwheel/releases</a>”&gt;pypa/cibuildwheel’s releases&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;h2&gt;v2.12.3&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix an import error when running on Python 3.7. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">https://redirect.github.com/pypa/cibuildwheel/issues/1479</a>”&gt;#1479&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;v2.12.2&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix a bug that caused an extra empty config-setting to be passed to the backend when CIBW_BUILD_FRONTEND is set to &lt;code&gt;build&lt;/code&gt;. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1474">https://redirect.github.com/pypa/cibuildwheel/issues/1474</a>”&gt;#1474&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🐛 Fix a crash that occurred when overwriting an existing wheel on Windows. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1464">https://redirect.github.com/pypa/cibuildwheel/issues/1464</a>”&gt;#1464&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🛠 Pinned version updates, including CPython 3.10.11, 3.11.3, pip 23.1 and wheel 0.40.0.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;v2.12.1&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix a bug that prevented the use of CIBW_CONFIG_SETTINGS with the ‘pip’ build backend. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1430">https://redirect.github.com/pypa/cibuildwheel/issues/1430</a>”&gt;#1430&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;v2.12.0&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;✨ Adds support for PyPy arm64 wheels. This means that you can build PyPy wheels for Apple Silicon machines. Cross-compilation is not supported for these wheels, so you’ll have to build on an Apple Silicon machine. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1372">https://redirect.github.com/pypa/cibuildwheel/issues/1372</a>”&gt;#1372&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🛠 Pinned version updates, including PyPy to v7.3.11 and setuptools to 66.0.0.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;/details&gt;
+&lt;details&gt;
+&lt;summary&gt;Changelog&lt;/summary&gt;
+&lt;p&gt;&lt;em&gt;Sourced from &lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/blob/main/docs/changelog.md">https://github.com/pypa/cibuildwheel/blob/main/docs/changelog.md</a>”&gt;pypa/cibuildwheel’s changelog&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;h3&gt;v2.12.3&lt;/h3&gt;
+&lt;p&gt;&lt;em&gt;19 April 2023&lt;/em&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix an import error when running on Python 3.7. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">https://redirect.github.com/pypa/cibuildwheel/issues/1479</a>”&gt;#1479&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;v2.12.2&lt;/h3&gt;
+&lt;p&gt;&lt;em&gt;18 April 2023&lt;/em&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix a bug that caused an extra empty config-setting to be passed to the backend when CIBW_BUILD_FRONTEND is set to &lt;code&gt;build&lt;/code&gt;. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1474">https://redirect.github.com/pypa/cibuildwheel/issues/1474</a>”&gt;#1474&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🐛 Fix a crash that occurred when overwriting an existing wheel on Windows. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1464">https://redirect.github.com/pypa/cibuildwheel/issues/1464</a>”&gt;#1464&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🛠 Pinned version updates, including CPython 3.10.11, 3.11.3, pip 23.1 and wheel 0.40.0.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;v2.12.1&lt;/h3&gt;
+&lt;p&gt;&lt;em&gt;11 March 2023&lt;/em&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;🐛 Fix a bug that prevented the use of CIBW_CONFIG_SETTINGS with the ‘pip’ build backend. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1430">https://redirect.github.com/pypa/cibuildwheel/issues/1430</a>”&gt;#1430&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;v2.12.0&lt;/h3&gt;
+&lt;p&gt;&lt;em&gt;16 Jan 2023&lt;/em&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;✨ Adds support for PyPy arm64 wheels. This means that you can build PyPy wheels for Apple Silicon machines. Cross-compilation is not supported for these wheels, so you’ll have to build on an Apple Silicon machine. (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1372">https://redirect.github.com/pypa/cibuildwheel/issues/1372</a>”&gt;#1372&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;🛠 Pinned version updates, including PyPy to v7.3.11 and setuptools to 66.0.0.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;/details&gt;
+&lt;details&gt;
+&lt;summary&gt;Commits&lt;/summary&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/5e15bb25b428e1bf2daf2215f173d2b40135f56f">https://github.com/pypa/cibuildwheel/commit/5e15bb25b428e1bf2daf2215f173d2b40135f56f</a>”&gt;&lt;code&gt;5e15bb2&lt;/code&gt;&lt;/a&gt; Bump version: v2.12.3&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/52572ccdd01fcde11603283bcfda090086a7d11c">https://github.com/pypa/cibuildwheel/commit/52572ccdd01fcde11603283bcfda090086a7d11c</a>”&gt;&lt;code&gt;52572cc&lt;/code&gt;&lt;/a&gt; Merge pull request &lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">https://redirect.github.com/pypa/cibuildwheel/issues/1479</a>”&gt;#1479&lt;/a&gt; from henryiii/henryiii/fix/py37&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/c6027e4fc72eee01851e06b1cd173aabeb3abfe0">https://github.com/pypa/cibuildwheel/commit/c6027e4fc72eee01851e06b1cd173aabeb3abfe0</a>”&gt;&lt;code&gt;c6027e4&lt;/code&gt;&lt;/a&gt; docs: fix options.md typos (&lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1477">https://redirect.github.com/pypa/cibuildwheel/issues/1477</a>”&gt;#1477&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/aff6dd5adc49114f1ee49c82bcb386a142fc614a">https://github.com/pypa/cibuildwheel/commit/aff6dd5adc49114f1ee49c82bcb386a142fc614a</a>”&gt;&lt;code&gt;aff6dd5&lt;/code&gt;&lt;/a&gt; refactor: tomllib in _compat&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/31bd9c91743e09f5b48c4def38c255c14c00d1af">https://github.com/pypa/cibuildwheel/commit/31bd9c91743e09f5b48c4def38c255c14c00d1af</a>”&gt;&lt;code&gt;31bd9c9&lt;/code&gt;&lt;/a&gt; refactor: restore typing for non-backports&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/d996af554ae21435028e538e417e403e8db7433e">https://github.com/pypa/cibuildwheel/commit/d996af554ae21435028e538e417e403e8db7433e</a>”&gt;&lt;code&gt;d996af5&lt;/code&gt;&lt;/a&gt; fix: restore Python 3.7 support&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/e42f243b523a93352f0686ba2f4a62b7bf5f7d34">https://github.com/pypa/cibuildwheel/commit/e42f243b523a93352f0686ba2f4a62b7bf5f7d34</a>”&gt;&lt;code&gt;e42f243&lt;/code&gt;&lt;/a&gt; ci: add Python 3.7&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/9f18d385cbb38b9c24f46a2c798f361ecea8fd5c">https://github.com/pypa/cibuildwheel/commit/9f18d385cbb38b9c24f46a2c798f361ecea8fd5c</a>”&gt;&lt;code&gt;9f18d38&lt;/code&gt;&lt;/a&gt; Bump version: v2.12.2&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/dfbc6c3902b689c250f9d9dd10ce8f88db8e2b7b">https://github.com/pypa/cibuildwheel/commit/dfbc6c3902b689c250f9d9dd10ce8f88db8e2b7b</a>”&gt;&lt;code&gt;dfbc6c3&lt;/code&gt;&lt;/a&gt; Merge pull request &lt;a href=”<a class="reference external" href="https://redirect.github.com/pypa/cibuildwheel/issues/1476">https://redirect.github.com/pypa/cibuildwheel/issues/1476</a>”&gt;#1476&lt;/a&gt; from henryiii/henryiii/chore/ruff_ex&lt;/li&gt;
+&lt;li&gt;&lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/commit/8c5f89c035ba6ac81794ed5a5d6cd2110957f181">https://github.com/pypa/cibuildwheel/commit/8c5f89c035ba6ac81794ed5a5d6cd2110957f181</a>”&gt;&lt;code&gt;8c5f89c&lt;/code&gt;&lt;/a&gt; chore: update typing to be generic on function args&lt;/li&gt;
+&lt;li&gt;Additional commits viewable in &lt;a href=”<a class="reference external" href="https://github.com/pypa/cibuildwheel/compare/v2.11.4...v2.12.3">https://github.com/pypa/cibuildwheel/compare/v2.11.4…v2.12.3</a>”&gt;compare view&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/details&gt;
+&lt;br /&gt;
+[![Dependabot compatibility score](<a class="reference external" href="https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=pypa/cibuildwheel&amp;package-manager=github_actions&amp;previous-version=2.11.4&amp;new-version=2.12.3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores">https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=pypa/cibuildwheel&amp;package-manager=github_actions&amp;previous-version=2.11.4&amp;new-version=2.12.3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores</a>)
+Dependabot will resolve any conflicts with this PR as long as you don’t alter it yourself. You can also trigger a rebase manually by commenting <cite>&#64;dependabot rebase</cite>.
+[//]: # (dependabot-automerge-start)</p>
+</dd>
+</dl>
+</li>
 </ul>
 <p><a class="reference internal" href="change_log.html"><span class="doc">Older versions</span></a></p>
 </section>
@@ -536,27 +617,6 @@ scientists. Please refer to the <a class="reference internal" href="references.h
 <section id="license">
 <h2>License<a class="headerlink" href="#license" title="Permalink to this heading"></a></h2>
 <p>Pymatgen is released under the MIT License.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">MIT</span> <span class="n">License</span> <span class="p">(</span><span class="n">MIT</span><span class="p">)</span>
-<span class="n">Copyright</span> <span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="mi">2011</span><span class="o">-</span><span class="mi">2012</span> <span class="n">MIT</span> <span class="o">&amp;</span> <span class="n">The</span> <span class="n">Regents</span> <span class="n">of</span> <span class="n">the</span> <span class="n">University</span> <span class="n">of</span> <span class="n">California</span><span class="p">,</span> <span class="n">through</span> <span class="n">Lawrence</span> <span class="n">Berkeley</span> <span class="n">National</span> <span class="n">Laboratory</span>
-
-<span class="n">Permission</span> <span class="ow">is</span> <span class="n">hereby</span> <span class="n">granted</span><span class="p">,</span> <span class="n">free</span> <span class="n">of</span> <span class="n">charge</span><span class="p">,</span> <span class="n">to</span> <span class="nb">any</span> <span class="n">person</span> <span class="n">obtaining</span> <span class="n">a</span> <span class="n">copy</span> <span class="n">of</span>
-<span class="n">this</span> <span class="n">software</span> <span class="ow">and</span> <span class="n">associated</span> <span class="n">documentation</span> <span class="n">files</span> <span class="p">(</span><span class="n">the</span> <span class="s2">&quot;Software&quot;</span><span class="p">),</span> <span class="n">to</span> <span class="n">deal</span> <span class="ow">in</span>
-<span class="n">the</span> <span class="n">Software</span> <span class="n">without</span> <span class="n">restriction</span><span class="p">,</span> <span class="n">including</span> <span class="n">without</span> <span class="n">limitation</span> <span class="n">the</span> <span class="n">rights</span> <span class="n">to</span>
-<span class="n">use</span><span class="p">,</span> <span class="n">copy</span><span class="p">,</span> <span class="n">modify</span><span class="p">,</span> <span class="n">merge</span><span class="p">,</span> <span class="n">publish</span><span class="p">,</span> <span class="n">distribute</span><span class="p">,</span> <span class="n">sublicense</span><span class="p">,</span> <span class="ow">and</span><span class="o">/</span><span class="ow">or</span> <span class="n">sell</span> <span class="n">copies</span> <span class="n">of</span>
-<span class="n">the</span> <span class="n">Software</span><span class="p">,</span> <span class="ow">and</span> <span class="n">to</span> <span class="n">permit</span> <span class="n">persons</span> <span class="n">to</span> <span class="n">whom</span> <span class="n">the</span> <span class="n">Software</span> <span class="ow">is</span> <span class="n">furnished</span> <span class="n">to</span> <span class="n">do</span> <span class="n">so</span><span class="p">,</span>
-<span class="n">subject</span> <span class="n">to</span> <span class="n">the</span> <span class="n">following</span> <span class="n">conditions</span><span class="p">:</span>
-
-<span class="n">The</span> <span class="n">above</span> <span class="n">copyright</span> <span class="n">notice</span> <span class="ow">and</span> <span class="n">this</span> <span class="n">permission</span> <span class="n">notice</span> <span class="n">shall</span> <span class="n">be</span> <span class="n">included</span> <span class="ow">in</span> <span class="nb">all</span>
-<span class="n">copies</span> <span class="ow">or</span> <span class="n">substantial</span> <span class="n">portions</span> <span class="n">of</span> <span class="n">the</span> <span class="n">Software</span><span class="o">.</span>
-
-<span class="n">THE</span> <span class="n">SOFTWARE</span> <span class="n">IS</span> <span class="n">PROVIDED</span> <span class="s2">&quot;AS IS&quot;</span><span class="p">,</span> <span class="n">WITHOUT</span> <span class="n">WARRANTY</span> <span class="n">OF</span> <span class="n">ANY</span> <span class="n">KIND</span><span class="p">,</span> <span class="n">EXPRESS</span> <span class="n">OR</span>
-<span class="n">IMPLIED</span><span class="p">,</span> <span class="n">INCLUDING</span> <span class="n">BUT</span> <span class="n">NOT</span> <span class="n">LIMITED</span> <span class="n">TO</span> <span class="n">THE</span> <span class="n">WARRANTIES</span> <span class="n">OF</span> <span class="n">MERCHANTABILITY</span><span class="p">,</span> <span class="n">FITNESS</span>
-<span class="n">FOR</span> <span class="n">A</span> <span class="n">PARTICULAR</span> <span class="n">PURPOSE</span> <span class="n">AND</span> <span class="n">NONINFRINGEMENT</span><span class="o">.</span> <span class="n">IN</span> <span class="n">NO</span> <span class="n">EVENT</span> <span class="n">SHALL</span> <span class="n">THE</span> <span class="n">AUTHORS</span> <span class="n">OR</span>
-<span class="n">COPYRIGHT</span> <span class="n">HOLDERS</span> <span class="n">BE</span> <span class="n">LIABLE</span> <span class="n">FOR</span> <span class="n">ANY</span> <span class="n">CLAIM</span><span class="p">,</span> <span class="n">DAMAGES</span> <span class="n">OR</span> <span class="n">OTHER</span> <span class="n">LIABILITY</span><span class="p">,</span> <span class="n">WHETHER</span>
-<span class="n">IN</span> <span class="n">AN</span> <span class="n">ACTION</span> <span class="n">OF</span> <span class="n">CONTRACT</span><span class="p">,</span> <span class="n">TORT</span> <span class="n">OR</span> <span class="n">OTHERWISE</span><span class="p">,</span> <span class="n">ARISING</span> <span class="n">FROM</span><span class="p">,</span> <span class="n">OUT</span> <span class="n">OF</span> <span class="n">OR</span> <span class="n">IN</span>
-<span class="n">CONNECTION</span> <span class="n">WITH</span> <span class="n">THE</span> <span class="n">SOFTWARE</span> <span class="n">OR</span> <span class="n">THE</span> <span class="n">USE</span> <span class="n">OR</span> <span class="n">OTHER</span> <span class="n">DEALINGS</span> <span class="n">IN</span> <span class="n">THE</span> <span class="n">SOFTWARE</span><span class="o">.</span>
-</pre></div>
-</div>
 </section>
 <section id="about-the-team">
 <h2>About the Team<a class="headerlink" href="#about-the-team" title="Permalink to this heading"></a></h2>
@@ -575,12 +635,6 @@ entire pymatgen Development Team. If individual contributors want to maintain a
 record of what changes/contributions they have specific copyright on, they
 should indicate their copyright in the commit message of the change, when
 they commit the change to one of the pymatgen repositories.</p>
-<p>With this in mind, the following banner should be used in any source code file
-to indicate the copyright and license terms:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Copyright (c) Pymatgen Development Team.</span>
-<span class="c1"># Distributed under the terms of the MIT License.</span>
-</pre></div>
-</div>
 </section>
 <section id="indices-and-tables">
 <h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h2>

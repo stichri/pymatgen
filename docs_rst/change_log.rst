@@ -1,6 +1,220 @@
 Change log
 ==========
 
+v2023.5.8
+---------
+* PR #2959 from @materialsproject dependabot/github_actions/pypa/cibuildwheel-2.12.3
+    Bumps [pypa/cibuildwheel](https://github.com/pypa/cibuildwheel) from 2.11.4 to 2.12.3.
+    <details>
+    <summary>Release notes</summary>
+    <p><em>Sourced from <a href="https://github.com/pypa/cibuildwheel/releases">pypa/cibuildwheel's releases</a>.</em></p>
+    <blockquote>
+    <h2>v2.12.3</h2>
+    <ul>
+    <li>🐛 Fix an import error when running on Python 3.7. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">#1479</a>)</li>
+    </ul>
+    <h2>v2.12.2</h2>
+    <ul>
+    <li>🐛 Fix a bug that caused an extra empty config-setting to be passed to the backend when CIBW_BUILD_FRONTEND is set to <code>build</code>. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1474">#1474</a>)</li>
+    <li>🐛 Fix a crash that occurred when overwriting an existing wheel on Windows. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1464">#1464</a>)</li>
+    <li>🛠 Pinned version updates, including CPython 3.10.11, 3.11.3, pip 23.1 and wheel 0.40.0.</li>
+    </ul>
+    <h2>v2.12.1</h2>
+    <ul>
+    <li>🐛 Fix a bug that prevented the use of CIBW_CONFIG_SETTINGS with the 'pip' build backend. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1430">#1430</a>)</li>
+    </ul>
+    <h2>v2.12.0</h2>
+    <ul>
+    <li>✨ Adds support for PyPy arm64 wheels. This means that you can build PyPy wheels for Apple Silicon machines. Cross-compilation is not supported for these wheels, so you'll have to build on an Apple Silicon machine. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1372">#1372</a>)</li>
+    <li>🛠 Pinned version updates, including PyPy to v7.3.11 and setuptools to 66.0.0.</li>
+    </ul>
+    </blockquote>
+    </details>
+    <details>
+    <summary>Changelog</summary>
+    <p><em>Sourced from <a href="https://github.com/pypa/cibuildwheel/blob/main/docs/changelog.md">pypa/cibuildwheel's changelog</a>.</em></p>
+    <blockquote>
+    <h3>v2.12.3</h3>
+    <p><em>19 April 2023</em></p>
+    <ul>
+    <li>🐛 Fix an import error when running on Python 3.7. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">#1479</a>)</li>
+    </ul>
+    <h3>v2.12.2</h3>
+    <p><em>18 April 2023</em></p>
+    <ul>
+    <li>🐛 Fix a bug that caused an extra empty config-setting to be passed to the backend when CIBW_BUILD_FRONTEND is set to <code>build</code>. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1474">#1474</a>)</li>
+    <li>🐛 Fix a crash that occurred when overwriting an existing wheel on Windows. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1464">#1464</a>)</li>
+    <li>🛠 Pinned version updates, including CPython 3.10.11, 3.11.3, pip 23.1 and wheel 0.40.0.</li>
+    </ul>
+    <h3>v2.12.1</h3>
+    <p><em>11 March 2023</em></p>
+    <ul>
+    <li>🐛 Fix a bug that prevented the use of CIBW_CONFIG_SETTINGS with the 'pip' build backend. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1430">#1430</a>)</li>
+    </ul>
+    <h3>v2.12.0</h3>
+    <p><em>16 Jan 2023</em></p>
+    <ul>
+    <li>✨ Adds support for PyPy arm64 wheels. This means that you can build PyPy wheels for Apple Silicon machines. Cross-compilation is not supported for these wheels, so you'll have to build on an Apple Silicon machine. (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1372">#1372</a>)</li>
+    <li>🛠 Pinned version updates, including PyPy to v7.3.11 and setuptools to 66.0.0.</li>
+    </ul>
+    </blockquote>
+    </details>
+    <details>
+    <summary>Commits</summary>
+    <ul>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/5e15bb25b428e1bf2daf2215f173d2b40135f56f"><code>5e15bb2</code></a> Bump version: v2.12.3</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/52572ccdd01fcde11603283bcfda090086a7d11c"><code>52572cc</code></a> Merge pull request <a href="https://redirect.github.com/pypa/cibuildwheel/issues/1479">#1479</a> from henryiii/henryiii/fix/py37</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/c6027e4fc72eee01851e06b1cd173aabeb3abfe0"><code>c6027e4</code></a> docs: fix options.md typos (<a href="https://redirect.github.com/pypa/cibuildwheel/issues/1477">#1477</a>)</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/aff6dd5adc49114f1ee49c82bcb386a142fc614a"><code>aff6dd5</code></a> refactor: tomllib in _compat</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/31bd9c91743e09f5b48c4def38c255c14c00d1af"><code>31bd9c9</code></a> refactor: restore typing for non-backports</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/d996af554ae21435028e538e417e403e8db7433e"><code>d996af5</code></a> fix: restore Python 3.7 support</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/e42f243b523a93352f0686ba2f4a62b7bf5f7d34"><code>e42f243</code></a> ci: add Python 3.7</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/9f18d385cbb38b9c24f46a2c798f361ecea8fd5c"><code>9f18d38</code></a> Bump version: v2.12.2</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/dfbc6c3902b689c250f9d9dd10ce8f88db8e2b7b"><code>dfbc6c3</code></a> Merge pull request <a href="https://redirect.github.com/pypa/cibuildwheel/issues/1476">#1476</a> from henryiii/henryiii/chore/ruff_ex</li>
+    <li><a href="https://github.com/pypa/cibuildwheel/commit/8c5f89c035ba6ac81794ed5a5d6cd2110957f181"><code>8c5f89c</code></a> chore: update typing to be generic on function args</li>
+    <li>Additional commits viewable in <a href="https://github.com/pypa/cibuildwheel/compare/v2.11.4...v2.12.3">compare view</a></li>
+    </ul>
+    </details>
+    <br />
+    [![Dependabot compatibility score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=pypa/cibuildwheel&package-manager=github_actions&previous-version=2.11.4&new-version=2.12.3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+    Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+    [//]: # (dependabot-automerge-start)
+    [//]: # (dependabot-automerge-end)
+    ---
+    <details>
+    <summary>Dependabot commands and options</summary>
+    <br />
+    You can trigger Dependabot actions by commenting on this PR:
+    - `@dependabot rebase` will rebase this PR
+    - `@dependabot recreate` will recreate this PR, overwriting any edits that have been made to it
+    - `@dependabot merge` will merge this PR after your CI passes on it
+    - `@dependabot squash and merge` will squash and merge this PR after your CI passes on it
+    - `@dependabot cancel merge` will cancel a previously requested merge and block automerging
+    - `@dependabot reopen` will reopen this PR if it is closed
+    - `@dependabot close` will close this PR and stop Dependabot recreating it. You can achieve the same result by closing it manually
+    - `@dependabot ignore this major version` will close this PR and stop Dependabot creating any more for this major version (unless you reopen the PR or upgrade to it yourself)
+    - `@dependabot ignore this minor version` will close this PR and stop Dependabot creating any more for this minor version (unless you reopen the PR or upgrade to it yourself)
+    - `@dependabot ignore this dependency` will close this PR and stop Dependabot creating any more for this dependency (unless you reopen the PR or upgrade to it yourself)
+    </details>
+* PR #2935 from @materialsproject pandas-v2-fixes
+    Closes #2914.
+    Replace calls to df.append() with pd.concat() and df.iteritems() with df.items().
+* PR #2925 from @jmmshn master
+    ## Allow proper versioning for forked repos
+    I'm not 100% sure how the current version numbering is updated for `pymatgen` but it's not able to update the number properly for forks.  The forks seem to keep a much older version number (from before the forking)
+    This creates problems if you have the forked repo as a dependency in a requirement.txt file.
+    This should fix that issue.
+
+v2023.3.23
+----------
+* Misc bug fixes.
+* Enable Structure relaxations with TrajectoryObserver (@janosh)
+* Breaking: Rename `gen_sl_transform_matricies->gen_sl_transform_matrices` (#2894)
+
+v2023.3.10
+----------
+* PR #2882 substrate-optimizations for speed up (@mkhorton)
+* Fix very fragile POTCAR parsing.
+
+v2023.2.28
+----------
+
+* 69a548e210 revert adding ubuntu-latest to release job matrix
+* e63cab3620 add 3.11 to release job python-versions
+* c03dacb94d use `cibuildwheel` to build linux wheels (#2800)
+* fe2597d92e Merge setup.cfg into pyproject.toml (#2858)
+* 40cbf1d7c4 del class AtomicFile, _maketemp(), ask_yesno() from pymatgen/util/io_utils.py (#2860)
+* 0b16987f2c fix reduced formula in Ion (#2864)
+
+v2023.2.22
+----------
+* PR #2848 from @ml-evs ml-evs/update_optimade_aliases
+    Currently `OptimadeRester` defaults to an outdated list of OPTIMADE database URLs (several of which fail) and the design of the class is such that refreshing these aliases can only be done post-init which means they will not be used if the user provides their own filtered list of aliases, without doing some extra work.
+    This PR refreshes the vendored list of aliases (which should be much more stable now since their initial addition 2 years ago), and also adds the option to refresh the aliases on initialization of the class.
+    This currently affects the pymatgen OPTIMADE tutorials at https://github.com/Materials-Consortia/optimade-tutorial-exercises.
+
+v2023.1.30
+----------
+* PR #2806 from @samblau qchem
+    - Major changes to Q-Chem IO (inputs.py and outputs.py) to accommodate differences and new features in version 6+
+    - Additional parsing capabilities for HOMO/LUMO, dipoles, NBO info (hyperbonds and 3C bonds) in outputs.py
+    - Utility for processing a parsed binary Hessian scratch file
+    - Overdue updates to default values in sets.py and new defaults associated with differences and new features in Q-Chem 6+
+* PR #2814 from @jmmshn patch_dos
+    ## Added Convenience to obtain the normalized CompleteDos object
+    Added tests to make sure calling it multiple time still only gives one result.
+
+v2023.1.20
+----------
+* Passthrough kwargs support for Structure.from_file and Structure.from_str
+* Allow the `frac_tolerance` to be specified for rounding coordinates in CifParser.
+* PR #2803 from @amkrajewski add_weightbasedfunctions
+    When working with metallic alloys, weight-fraction-based notations such as Ti64 / Ti-6V-4Al or NiTiNOL60 / Ni-40Ti are commonly employed in both industrial specifications and scientific literature. Regardless of the numerous downsides of this situation, including errors in scientific experiments or NLP-parsing when they are mistaken for atomic fractions or chemical formulas, being able to create a Composition object from them (under correct interpretation) would be a useful pymatgen feature.
+    - Composition class method to initialize it from a dictionary of weight fractions
+    - Composition property giving a dictionary of weight fractions
+    - concise tests for the two above were added
+QChem: translate DMSO name in smd_solvent
+
+v2023.1.9
+---------
+* PR #2792 from @JaGeo bug_fix
+* PR #2773 from @ab5424 cbar
+* PR #2776 from @MichaelWolloch master
+* PR #2762 from @MichaelWolloch master
+* PR #2774 from @dgaines2 fix-poscar
+* PR #2667 from @nwinner volumetric-data-patch
+* PR #2764 from @naik-aakash lobster_lsodos
+* PR #2215 from @rkingsbury cmirs
+* PR #2742 from @materialsproject pip-dependabot
+* PR #2741 from @materialsproject resurrect-req-txt
+* PR #2735 from @njzjz patch-1
+
+v2022.11.7
+----------
+* PR #2724 from @janosh: raise ValueError in ``SpacegroupAnalyzer.get_symmetrized_structure()`` if spglib returns no symmetries
+* PR #2720 by @utf: Fix tensor mapping
+* PR #2562 from @sudarshanv01: In case the Fock-matrix and eigenvalues are requested by the user (though the flags `scf_final_print` or `scf_print`), outputs.py now allows parsing both these quantities.
+
+v2022.11.1
+----------
+* Order of kwargs `fmt` and `filename` in `Structure.to()` swapped for ease of use (note: this can break codes that do not use these options as kwargs).
+* @yuzie007 Parse "Atomic configuration" in POTCAR (52 and 54). Useful for estimating a reasonable NBANDS value.
+* EnumerateStructureTransformation now supports `m3gnet_relax` or `m3gnet_static` options.
+
+v2022.10.22
+-----------
+* Allow env settings to override .pmgrc.yaml (@janosh)
+* Add EntryLike type (@janosh)
+* Update spglib to 2.0+.
+* @cnncnnzh Method to plot the atom-resolved phonon band structures.
+* @jmmshn More Flexible reproduction of VASP's optical code
+* @Ameyanagi Fix the sorting of the FEFF IO module to create ATOMS input.
+* @JaGeo Extend the ThermalDisplacementMatrices class to read cif files in P1 format.
+* @rkingsbury Changes to FEFF I/O to support the use of non-periodic input structures.
+* @jmmshn Merge Waverder and Wavederf
+* @jmmshn  Set the structure_charge while parsing Potcar
+
+v2022.9.21
+----------
+* @chunweizhu fix the bugs when running `TEMCalculator`
+* @munrojm Support for new MPRester.
+
+v2022.9.8
+---------
+* @janosh Add AirssProvider.as_dict
+* @gpetretto Outcar parsing optimization.
+* @ScottNotFound Adds res file io to handle results from airss searches
+* @janosh Fixes the `AttributeError` currently raised when passing disordered structures to methods like `get_cn()` and `get_bonded_structure()` of `CrystalNN` and other `NearNeighbors` subclasses.
+* @naik-aakash Added new option `standard_with_comp_range` for generating lobsterin files using vasp
+
+v2022.8.23
+----------
+* Structure Graphs from Lobster Data (@JaGeo)
+* Added 'get_orbit_and_generators'-method to SpaceGroup class (@nheinsdorf)
+* Class to handle Thermal displacements matrices (@JaGeo)
+* Change default number of significant digits to write VASP POSCAR (@henriquemiranda)
+* Misc bug fixes.
+
 v2022.7.25
 ----------
 * Implemented sufficient methods for new MPRester to cover about 70-80% of common use cases.
@@ -51,16 +265,16 @@ Welcome to new contributors @naveensrinivasan, @xivh, @dgaines2, @yang-ruoxi, @c
 * Enhancement: Remove not converged warning for VASP AIMD runs, PR #2571 by @mjwen
 * Fix: generation of continuous line-mode band structures, PR #2533 by @munrojm
 * Fix: duplicate site properties for magnetic moments hwen using `AseAtomsAdaptor`, PR #2545 by @arosen93
-* Fix: bug in Grüneisen parameter calculation, PR #2543 by by @ab5424
+* Fix: bug in Grüneisen parameter calculation, PR #2543 by @ab5424
 * Fix: allow a comment on final line of KPOINTS file, PR #2549 by @xivh
 * Fix: for `Composition.replace` with complex mappings, PR #2555 by @jacksund
 * Fix: Implement equality method and fix __iter__ for InputSet, PR #2575 by @rkingsbury
 * Fix: use negative charge convention for electron in "update_charge_from_potcar", PR #2577 by @jmmshn
 * Fix: ensure charge is applied to initial and final structures parsed from vasprun.xml, PR #2579 by @jmmshn
 * Chore: Set permissions for GitHub actions, PR #2547 by @naveensrinivasan
-* Chore: Included GitHub actions in the Dependabot config, PR #2548 by by @naveensrinivasan
+* Chore: Included GitHub actions in the Dependabot config, PR #2548 by @naveensrinivasan
 * Documentation: fix typos in pymatgen.symmetry.analyzer docstrings, PR #2561 by @dgaines2
-* Documentation: clarification about usage of InputFile, PR #2570 by by @orionarcher
+* Documentation: clarification about usage of InputFile, PR #2570 by @orionarcher
 * Documentation: Improve messages and warnings, PR #2572 and PR #2573 by @cajfisher
 * Documentation: fix typo, PR #2580 by @janosh
 
@@ -75,7 +289,7 @@ v2022.5.26
 
 v2022.5.19
 ----------
-* Added option for addtional criteria to be passed to MPRester.get_entries_in_chemsys (@shyuep).
+* Added option for additional criteria to be passed to MPRester.get_entries_in_chemsys (@shyuep).
 
 v2022.5.18.1
 ------------
@@ -123,7 +337,7 @@ v2022.3.22
 * Support kwargs for ASE adaptor. (@arosen93)
 * Fix for cation error in Lobster analysis. (@JaGeo)
 * Major revampt of Abstract interface for Input classes in IO. (@rkingsbury)
-* Orbital-projected band center, band filling, band ceneter, skewness, kurtosis, etc. (@arosen93)
+* Orbital-projected band center, band filling, band center, skewness, kurtosis, etc. (@arosen93)
 * Misc cleanups. (@janosh)
 
 v2022.3.7
@@ -249,7 +463,7 @@ you are acknowledged appropriately by filling out the linked form.
 * General improvements to Phase Diagram code (@CompyRhys, #2263, #2264, #2268)
 * Improve appearance of periodic table heatmap (@penicillin0, #2272)
 * Small improvements to battery classes (@jmmshn, #2262)
-* Fix for Composition.chemical_system to match expected behaviour for compositions with oxidation states (@CompRhys, #2249)
+* Fix for Composition.chemical_system to match expected behavior for compositions with oxidation states (@CompRhys, #2249)
 * Fix for bad param in OPTIMADE response fields (@ml-evs, #2244)
 * Fix for issue in parsing `bandOverlaps.lobster` file (@pzarabadip, #2237)
 * Fix for Moladaptor (@orioncohen, #2269)
@@ -332,7 +546,7 @@ v2022.0.8
 * PR #2132 from @htz1992213 speeds up LammpsData.as_string for
   non-hybrid data with large coeff sections and adds as_lammpsdata method to
   CombinedData
-* PR #2129 from @richardtran415 improves analysis of surface symmetry of slabs.
+* PR #2129 from @CifLord improves analysis of surface symmetry of slabs.
 * PR #2117 from @nwinner contains bug fixes for bader caller.
 
 v2022.0.7
@@ -443,7 +657,7 @@ v2021.3.3
 * **Backwards incompatible**: pymatgen.loadfn and get_structure_from_mp have been
   removed since no one was using them.
 * critic2_caller has been refactored. (@samblau)
-* Improved hash for Compositon (@CompRhys)
+* Improved hash for Composition (@CompRhys)
 * Fixes Outcar parsing for VASP 6.2.0. (@MichaelWolloch)
 * Allow None for Gaussian functional, bset, charge and multiplicity (@eimrek)
 
@@ -576,7 +790,7 @@ v2020.7.16
 
 v2020.7.14
 ----------
-* EwaldSummation is now MSONAble (@lbluque).
+* EwaldSummation is now MSONable (@lbluque).
 * Fix for QChem freq parsing (@samblau)
 * Much improved linting and workflows.
 
@@ -619,7 +833,7 @@ v2020.4.2
 ---------
 * New high-symmetry k-path algorithm (@munrojm, @kt-latimer)
 * New TEM diffraction calculator (@welltemperedpaprika, @thefrankwan, @shyamd)
-* New plotly plotting option for Wulff shapes (@richardtran415)
+* New plotly plotting option for Wulff shapes (@CifLord)
 * Improvements to SQS caller (@rwoodsrobinson)
 * Various bug fixes and improvements (@mfherbst, @chc273,
   @jacksund, @espottesmith, @hongyi-zhao, @montoyjh,
@@ -641,7 +855,7 @@ v2020.3.2
 ---------
 * New MonteCarloRattleTransformation and phonopy integration (@utf)
 * New structure connectivity features in Chemenv analysis (@davidwaroquiers)
-* Bug fixes (@richardtran415, @chc273, @JaGeo, @dskoda, @rkingsbury,
+* Bug fixes (@CifLord, @chc273, @JaGeo, @dskoda, @rkingsbury,
   @jmmshn, @espottesmith, @gVallverdu, @yimingchen95, @fraricci)
 
 v2020.1.28
@@ -693,7 +907,7 @@ v2019.10.4
 v2019.10.3
 ----------
 * Faster get_all_neighbors based on @chc273's improvements. get_all_neighbors
-  now returns a Site-like object with nn_distance, image and index attrbutes.
+  now returns a Site-like object with nn_distance, image and index attributes.
   Much easier to use.
 * Bug fix for XCrySDen parser (@stevetorr)
 * Added optional mid_struct to direct interpolation (@jmmshn)
@@ -722,7 +936,7 @@ v2019.9.8
 v2019.9.7
 ---------
 * New fast Pourbaix algorithm (@montoyjh)
-* VASP Incar parameter checking (@richardtran415)
+* VASP Incar parameter checking (@CifLord)
 * New VASP input set for Lobster, read support for GROSSPOP file (@JaGeo)
 * New CombinedData class  for LAMMPS (@htz1992213)
 * Improvements to molecule fragmenter (@samblau)
@@ -759,7 +973,7 @@ v2019.7.21
 * Improved Lobster interface (@JaGeo)
 * Bug fixes (@sthartman, @dwinston, @utf)
 * New functionality for calculation of Heisenberg exchange parameters (@ncfrey)
-* Improvements to Miller indices handling and Lattice (@richardtran415)
+* Improvements to Miller indices handling and Lattice (@CifLord)
 
 
 v2019.7.2
@@ -775,7 +989,7 @@ v2019.7.2
 v2019.6.20
 ----------
 * New interface class (@sivonxay, @kylebystrom, @shyamd)
-* Updates to SlabGenerator (@richardtran415)
+* Updates to SlabGenerator (@CifLord)
 * Updates to PiezoTensor (@dongsenfo)
 * Add support for parsing on-site density matrix to Outcar (@mkhorton, @mhsiron, @clegaspi)
 * Fixes for magnetic space groups (@simonward86)
@@ -832,7 +1046,7 @@ in MPNonSCFSet (@dyllamt), battery app (@jmmshn), MPSOCSet (@mkhorton),
 more
 * Improvements to COHP (@JaGeo)
 * Support to read WAVEDER files (@knc6)
-* Addition of van Arkel-Ketelaar triangle plots (@richardtran415)
+* Addition of van Arkel-Ketelaar triangle plots (@CifLord)
 * Addition of optional user agent to MPRester API calls, see documentation
 for more information (@dwinston)
 
@@ -862,12 +1076,12 @@ v2019.3.13
                 user_kpoints_settings={"reciprocal_density": k_dens})
             vi = vis.get_vasp_input()
             kpoints = vi["KPOINTS"].kpts[0][0]
-            d = "Li2O_kpoints_%d" % kpoints
+            d = f"Li2O_kpoints_{kpoints}"
 
             # Directly run vasp.
             vi.run_vasp(d, vasp_cmd=VASP_CMD)
             # Use the final structure as the new initial structure to speed up calculations.
-            structure = Vasprun("%s/vasprun.xml" % d).final_structure
+            structure = Vasprun(f"{d}/vasprun.xml").final_structure
 
 
     if __name__ == "__main__":
@@ -923,10 +1137,10 @@ v2018.11.30
   (@dwinston)
 * MVLRelax52Set which uses VASP 52 pseudopotentials. (@HanmeiTang)
 * EPH calculations in ABINIT (@gmatteo)
-* New ScaleToRelaxedTransformation (@richardtran415)
+* New ScaleToRelaxedTransformation (@CifLord)
 * New dimensionality finder, and consolidation of existing algorithms (@utf)
 * New dopant predictor built on structure predictor (@utf)
-* Misc bug fixes (@HanmeiTang, @utf, @tamuhey, @mkhorton, @yiming-xu, @richardtran415)
+* Misc bug fixes (@HanmeiTang, @utf, @tamuhey, @mkhorton, @yiming-xu, @CifLord)
 
 v2018.11.6
 ----------
@@ -1007,7 +1221,7 @@ v2018.6.27
 ----------
 * Improved local_env and MoleculeGraph (@WardLT, @espottesmith)
 * Improve BabelMolAdaptor with conformer search and other functions (@Qi-Max)
-* Improved surface analysis (@richardtran415)
+* Improved surface analysis (@CifLord)
 
 v2018.6.11
 ----------
@@ -1893,7 +2107,7 @@ v3.0.3
 * Lots of improvements to Gaussian support (Nicolas Dardenne) and Abinit IO
   (Matteo).
 * Lots of Py3k minor updates.
-* Updated doc for Diffusion anaylzer. Invert sq_disp_ions for more intuitive handling.
+* Updated doc for Diffusion analyzer. Invert sq_disp_ions for more intuitive handling.
 
 v3.0.2
 ------

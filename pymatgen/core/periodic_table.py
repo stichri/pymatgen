@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """Module contains classes presenting Element and Species (Element + oxidation state) and PeriodicTable."""
 
 from __future__ import annotations
@@ -14,7 +11,7 @@ from collections import Counter
 from enum import Enum
 from itertools import combinations, product
 from pathlib import Path
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, Literal
 
 import numpy as np
 from monty.json import MSONable
@@ -272,7 +269,7 @@ class ElementBase(Enum):
             "ionization_energies",
         ]:
             kstr = item.capitalize().replace("_", " ")
-            val = self._data.get(kstr, None)
+            val = self._data.get(kstr)
             if str(val).startswith("no data"):
                 val = None
             elif isinstance(val, (list, dict)):
@@ -419,7 +416,8 @@ class ElementBase(Enum):
     @property
     def icsd_oxidation_states(self) -> tuple[int, ...]:
         """Tuple of all oxidation states with at least 10 instances in
-        ICSD database AND at least 1% of entries for that element"""
+        ICSD database AND at least 1% of entries for that element
+        """
         return tuple(self._data.get("ICSD oxidation states", []))
 
     @property
@@ -437,15 +435,15 @@ class ElementBase(Enum):
         [(1, "s", 2), (2, "s", 2), (2, "p", 6), (3, "s", 2), (3, "p", 6),
         (3, "d", 6), (4, "s", 2)]
         """
-        estr = self.electronic_structure
+        e_str = self.electronic_structure
 
-        def parse_orbital(orbstr):
-            m = re.match(r"(\d+)([spdfg]+)(\d+)", orbstr)
+        def parse_orbital(orb_str):
+            m = re.match(r"(\d+)([spdfg]+)(\d+)", orb_str)
             if m:
                 return int(m.group(1)), m.group(2), int(m.group(3))
-            return orbstr
+            return orb_str
 
-        data = [parse_orbital(s) for s in estr.split(".")]
+        data = [parse_orbital(s) for s in e_str.split(".")]
         if data[0][0] == "[":
             sym = data[0].replace("[", "").replace("]", "")
             data = list(Element(sym).full_electronic_structure) + data[1:]
@@ -465,12 +463,11 @@ class ElementBase(Enum):
         full_electron_config = self.full_electronic_structure
         last_orbital = full_electron_config[-1]
         for n, l_symbol, ne in full_electron_config:
-            l = L_symbols.lower().index(l_symbol)
-            if ne < (2 * l + 1) * 2:
-                valence.append((l, ne))
-            # check for full last shell (e.g. column 2)
-            elif (n, l_symbol, ne) == last_orbital and ne == (2 * l + 1) * 2 and len(valence) == 0:
-                valence.append((l, ne))
+            idx = L_symbols.lower().index(l_symbol)
+            if ne < (2 * idx + 1) * 2 or (
+                (n, l_symbol, ne) == last_orbital and ne == (2 * idx + 1) * 2 and len(valence) == 0
+            ):  # check for full last shell (e.g. column 2)
+                valence.append((idx, ne))
         if len(valence) > 1:
             raise ValueError("Ambiguous valence")
 
@@ -516,7 +513,6 @@ class ElementBase(Enum):
             for ML in range(-L, L - 1, -1):
                 for MS in np.arange(S, -S + 1, 1):
                     if (ML, MS) in comb_counter:
-
                         comb_counter[(ML, MS)] -= 1
                         if comb_counter[(ML, MS)] == 0:
                             del comb_counter[(ML, MS)]
@@ -527,7 +523,6 @@ class ElementBase(Enum):
         """
         Ground state term symbol
         Selected based on Hund's Rule
-
         """
         L_symbols = "SPDFGHIKLMNOQRTUVWXYZ"
 
@@ -608,6 +603,7 @@ class ElementBase(Enum):
         Args:
             name: Long name of the element, e.g. 'Hydrogen' or
                   'Iron'. Not case-sensitive.
+
         Returns:
             Element with the name 'name'
         """
@@ -919,7 +915,7 @@ class Element(ElementBase):
     B = "B"
     C = "C"
     N = "N"
-    O = "O"
+    O = "O"  # noqa: E741
     F = "F"
     Ne = "Ne"
     Na = "Na"
@@ -964,7 +960,7 @@ class Element(ElementBase):
     Sn = "Sn"
     Sb = "Sb"
     Te = "Te"
-    I = "I"
+    I = "I"  # noqa: E741
     Xe = "Xe"
     Cs = "Cs"
     Ba = "Ba"
@@ -1076,7 +1072,7 @@ class Species(MSONable, Stringify):
         """
         self._el = Element(symbol)
         self._oxi_state = oxidation_state
-        self._properties = properties if properties else {}
+        self._properties = properties or {}
         for k, _ in self._properties.items():
             if k not in Species.supported_properties:
                 raise ValueError(f"{k} is not a supported property")
@@ -1111,9 +1107,9 @@ class Species(MSONable, Stringify):
         Sets a default sort order for atomic species by electronegativity,
         followed by oxidation state, followed by spin.
         """
-        if not hasattr(other, "X") or not hasattr(other, "symbol"):
+        if not isinstance(other, type(self)):
             return NotImplemented
-        other = cast(Species, other)
+
         x1 = float("inf") if self.X != self.X else self.X
         x2 = float("inf") if other.X != other.X else other.X
         if x1 != x2:
@@ -1142,7 +1138,6 @@ class Species(MSONable, Stringify):
         """
         Ionic radius of specie. Returns None if data is not present.
         """
-
         if self._oxi_state in self.ionic_radii:
             return self.ionic_radii[self._oxi_state]
         if self._oxi_state:
@@ -1179,7 +1174,6 @@ class Species(MSONable, Stringify):
         Raises:
             ValueError if species_string cannot be interpreted.
         """
-
         # e.g. Fe2+,spin=5
         # 1st group: ([A-Z][a-z]*)    --> Fe
         # 2nd group: ([0-9.]*)        --> "2"
@@ -1188,7 +1182,6 @@ class Species(MSONable, Stringify):
 
         m = re.search(r"([A-Z][a-z]*)([0-9.]*)([+\-]*)(.*)", species_string)
         if m:
-
             # parse symbol
             sym = m.group(1)
 
@@ -1247,7 +1240,6 @@ class Species(MSONable, Stringify):
             isotope (str): the isotope to get the quadrupole moment for
                 default is None, which gets the lowest mass isotope
         """
-
         quad_mom = self._el.nmr_quadrupole_moment
 
         if not quad_mom:
@@ -1321,31 +1313,31 @@ class Species(MSONable, Stringify):
         elec = self.full_electronic_structure
         if len(elec) < 4 or elec[-1][1] != "s" or elec[-2][1] != "d":
             raise AttributeError(f"Invalid element {self.symbol} for crystal field calculation.")
-        nelectrons = elec[-1][2] + elec[-2][2] - self.oxi_state
-        if nelectrons < 0 or nelectrons > 10:
+        n_electrons = elec[-1][2] + elec[-2][2] - self.oxi_state
+        if n_electrons < 0 or n_electrons > 10:
             raise AttributeError(f"Invalid oxidation state {self.oxi_state} for element {self.symbol}")
         if spin_config == "high":
-            if nelectrons <= 5:
-                return nelectrons
-            return 10 - nelectrons
+            if n_electrons <= 5:
+                return n_electrons
+            return 10 - n_electrons
         if spin_config == "low":
             if coordination == "oct":
-                if nelectrons <= 3:
-                    return nelectrons
-                if nelectrons <= 6:
-                    return 6 - nelectrons
-                if nelectrons <= 8:
-                    return nelectrons - 6
-                return 10 - nelectrons
+                if n_electrons <= 3:
+                    return n_electrons
+                if n_electrons <= 6:
+                    return 6 - n_electrons
+                if n_electrons <= 8:
+                    return n_electrons - 6
+                return 10 - n_electrons
             if coordination == "tet":
-                if nelectrons <= 2:
-                    return nelectrons
-                if nelectrons <= 4:
-                    return 4 - nelectrons
-                if nelectrons <= 7:
-                    return nelectrons - 4
-                return 10 - nelectrons
-        raise RuntimeError()
+                if n_electrons <= 2:
+                    return n_electrons
+                if n_electrons <= 4:
+                    return 4 - n_electrons
+                if n_electrons <= 7:
+                    return n_electrons - 4
+                return 10 - n_electrons
+        raise RuntimeError(f"should not reach here, {spin_config=}, {coordination=}")
 
     def __deepcopy__(self, memo):
         return Species(self.symbol, self.oxi_state, self._properties)
@@ -1370,7 +1362,7 @@ class Species(MSONable, Stringify):
         :param d: Dict representation.
         :return: Species.
         """
-        return cls(d["element"], d["oxidation_state"], d.get("properties", None))
+        return cls(d["element"], d["oxidation_state"], d.get("properties"))
 
 
 @functools.total_ordering
@@ -1402,7 +1394,7 @@ class DummySpecies(Species):
         symbol: str = "X",
         oxidation_state: float | None = 0,
         properties: dict | None = None,
-    ):
+    ) -> None:
         """
         Args:
             symbol (str): An assigned symbol for the dummy specie. Strict
@@ -1411,25 +1403,24 @@ class DummySpecies(Species):
                 constitute an Element symbol. Otherwise, a composition may
                 be parsed wrongly. E.g., "X" is fine, but "Vac" is not
                 because Vac contains V, a valid Element.
-            oxidation_state (float): Oxidation state for dummy specie.
-                Defaults to zero.
+            oxidation_state (float): Oxidation state for dummy specie. Defaults to 0.
+            properties (dict): Arbitrary properties associated with dummy specie.
         """
         # enforce title case to match other elements, reduces confusion
         # when multiple DummySpecies in a "formula" string
         symbol = symbol.title()
 
-        for i in range(1, min(2, len(symbol)) + 1):
-            if Element.is_valid_symbol(symbol[:i]):
-                raise ValueError(f"{symbol} contains {symbol[:i]}, which is a valid element symbol.")
+        for idx in range(1, min(2, len(symbol)) + 1):
+            if Element.is_valid_symbol(symbol[:idx]):
+                raise ValueError(f"{symbol} contains {symbol[:idx]}, which is a valid element symbol.")
 
         # Set required attributes for DummySpecies to function like a Species in
         # most instances.
         self._symbol = symbol
         self._oxi_state = oxidation_state
-        self._properties = properties if properties else {}
-        for k, _ in self._properties.items():
-            if k not in Species.supported_properties:
-                raise ValueError(f"{k} is not a supported property")
+        self._properties = properties or {}
+        if invalid := set(self._properties) - set(Species.supported_properties):
+            raise ValueError(f"Invalid properties: {invalid}")
 
     def __getattr__(self, a):
         # overriding getattr doesn't play nice with pickle, so we
@@ -1519,7 +1510,7 @@ class DummySpecies(Species):
 
     def as_dict(self) -> dict:
         """
-        :return: MSONAble dict representation.
+        :return: MSONable dict representation.
         """
         d = {
             "@module": type(self).__module__,
@@ -1537,7 +1528,7 @@ class DummySpecies(Species):
         :param d: Dict representation
         :return: DummySpecies
         """
-        return cls(d["element"], d["oxidation_state"], d.get("properties", None))
+        return cls(d["element"], d["oxidation_state"], d.get("properties"))
 
     def __repr__(self):
         return f"DummySpecies {self}"

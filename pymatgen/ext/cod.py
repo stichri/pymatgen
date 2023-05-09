@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes to interface with the Crystallography Open
 Database. If you use data from the COD, please cite the following works (as
@@ -28,6 +25,8 @@ stipulated by the COD developers)::
     Downs, R. T. & Hall-Wallace, M. (2003) "The American Mineralogist Crystal
     Structure Database". American Mineralogist 88, 247-250.
 """
+
+from __future__ import annotations
 
 import re
 import subprocess
@@ -80,8 +79,8 @@ class COD:
         sql = f'select file from data where formula="- {Composition(formula).hill_formula} -"'
         text = self.query(sql).split("\n")
         cod_ids = []
-        for l in text:
-            m = re.search(r"(\d+)", l)
+        for line in text:
+            m = re.search(r"(\d+)", line)
             if m:
                 cod_ids.append(int(m.group(1)))
         return cod_ids
@@ -120,9 +119,9 @@ class COD:
         sql = f'select file, sg from data where formula="- {Composition(formula).hill_formula} -"'
         text = self.query(sql).split("\n")
         text.pop(0)
-        for l in text:
-            if l.strip():
-                cod_id, sg = l.split("\t")
+        for line in text:
+            if line.strip():
+                cod_id, sg = line.split("\t")
                 r = requests.get(f"http://www.crystallography.net/cod/{cod_id.strip()}.cif")
                 try:
                     s = Structure.from_str(r.text, fmt="cif", **kwargs)

@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module implements a FloatWithUnit, which is a subclass of float. It
 also defines supported units for some commonly used units for energy, length,
@@ -10,9 +7,12 @@ units are detected. An ArrayWithUnit is also implemented, which is a subclass
 of numpy's ndarray with similar unit features.
 """
 
+from __future__ import annotations
+
 import collections
 import numbers
 from functools import partial
+from typing import Any
 
 import numpy as np
 import scipy.constants as const
@@ -131,14 +131,14 @@ DERIVED_UNITS = {
     "cross_section": {"barn": {"m": 2, 1e-28: 1}, "mbarn": {"m": 2, 1e-31: 1}},
 }
 
-ALL_UNITS = dict(list(BASE_UNITS.items()) + list(DERIVED_UNITS.items()))  # type: ignore
+ALL_UNITS = {**BASE_UNITS, **DERIVED_UNITS}  # type: ignore
 SUPPORTED_UNIT_NAMES = tuple(i for d in ALL_UNITS.values() for i in d)
 
 # Mapping unit name --> unit type (unit names must be unique).
 _UNAME2UTYPE = {}  # type: ignore
 for utype, d in ALL_UNITS.items():
-    assert not set(d).intersection(_UNAME2UTYPE)
-    _UNAME2UTYPE.update({uname: utype for uname in d})
+    assert not set(d).intersection(_UNAME2UTYPE)  # type: ignore
+    _UNAME2UTYPE.update({uname: utype for uname in d})  # type: ignore
 del utype, d
 
 
@@ -183,7 +183,6 @@ class Unit(collections.abc.Mapping):
                 format uses "^" as the power operator and all units must be
                 space-separated.
         """
-
         if isinstance(unit_def, str):
             unit = collections.defaultdict(int)
             import re
@@ -236,9 +235,6 @@ class Unit(collections.abc.Mapping):
         return " ".join(
             [f"{k}^{self._unit[k]}" if self._unit[k] != 1 else k for k in sorted_keys if self._unit[k] != 0]
         )
-
-    def __str__(self):
-        return self.__repr__()
 
     @property
     def as_base_units(self):
@@ -317,8 +313,9 @@ class FloatWithUnit(float):
 
     @classmethod
     def from_string(cls, s):
-        """
-        Initialize a FloatWithUnit from a string. Example Memory.from_string("1. Mb")
+        """Parse string to FloatWithUnit.
+
+        Example: Memory.from_string("1. Mb")
         """
         # Extract num and unit string.
         s = s.strip()
@@ -483,7 +480,7 @@ class FloatWithUnit(float):
 
 class ArrayWithUnit(np.ndarray):
     """
-    Subclasses `numpy.ndarray` to attach a unit type. Typically, you should
+    Subclasses numpy.ndarray to attach a unit type. Typically, you should
     use the pre-defined unit type subclasses such as EnergyArray,
     LengthArray, etc. instead of using ArrayWithFloatWithUnit directly.
 
@@ -765,21 +762,22 @@ Args:
 """
 
 
-def obj_with_unit(obj, unit):
+def obj_with_unit(obj: Any, unit: str) -> FloatWithUnit | ArrayWithUnit | dict[str, FloatWithUnit | ArrayWithUnit]:
     """
-    Returns a `FloatWithUnit` instance if obj is scalar, a dictionary of
+    Returns a FloatWithUnit instance if obj is scalar, a dictionary of
     objects with units if obj is a dict, else an instance of
-    `ArrayWithFloatWithUnit`.
+    ArrayWithFloatWithUnit.
 
     Args:
-        unit: Specific units (eV, Ha, m, ang, etc.).
+        obj (Any): Object to be given a unit.
+        unit (str): Specific units (eV, Ha, m, ang, etc.).
     """
     unit_type = _UNAME2UTYPE[unit]
 
     if isinstance(obj, numbers.Number):
         return FloatWithUnit(obj, unit=unit, unit_type=unit_type)
     if isinstance(obj, collections.abc.Mapping):
-        return {k: obj_with_unit(v, unit) for k, v in obj.items()}
+        return {k: obj_with_unit(v, unit) for k, v in obj.items()}  # type: ignore
     return ArrayWithUnit(obj, unit=unit, unit_type=unit_type)
 
 

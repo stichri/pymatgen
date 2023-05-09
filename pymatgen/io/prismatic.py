@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 Write Prismatic (http://prism-em.com) input files.
 """
@@ -30,7 +27,6 @@ class Prismatic:
         Returns: Prismatic XYZ file. This is similar to XYZ format
         but has specific requirements for extra fields, headers, etc.
         """
-
         lattice = self.structure.lattice
         lines = [self.comment, " ".join(map(str, lattice.lengths))]
         for site in self.structure:

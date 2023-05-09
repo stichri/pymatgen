@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes to define a phonon band structure.
 """
@@ -162,7 +159,6 @@ class PhononBandStructure(MSONable):
         """
         True if imaginary frequencies are present in the BS.
         """
-
         return self.min_freq()[1] + tol < 0
 
     @property
@@ -225,10 +221,8 @@ class PhononBandStructure(MSONable):
         identified or eigendisplacements are missing the first 3 modes will be used
         (indices [0:3]).
         """
-
         for i in range(self.nb_qpoints):
             if np.allclose(self.qpoints[i].frac_coords, (0, 0, 0)):
-
                 if self.has_eigendisplacements:
                     acoustic_modes_index = []
                     for j in range(self.nb_bands):
@@ -265,12 +259,12 @@ class PhononBandStructure(MSONable):
             d["labels_dict"][kpoint_letter] = kpoint_object.as_dict()["fcoords"]
 
         # split the eigendisplacements to real and imaginary part for serialization
-        d["eigendisplacements"] = dict(
-            real=np.real(self.eigendisplacements).tolist(),
-            imag=np.imag(self.eigendisplacements).tolist(),
-        )
+        d["eigendisplacements"] = {
+            "real": np.real(self.eigendisplacements).tolist(),
+            "imag": np.imag(self.eigendisplacements).tolist(),
+        }
         d["nac_eigendisplacements"] = [
-            (direction, dict(real=np.real(e).tolist(), imag=np.imag(e).tolist()))
+            (direction, {"real": np.real(e).tolist(), "imag": np.imag(e).tolist()})
             for direction, e in self.nac_eigendisplacements
         ]
         d["nac_frequencies"] = [(direction, f.tolist()) for direction, f in self.nac_frequencies]
@@ -333,8 +327,8 @@ class PhononBandStructureSymmLine(PhononBandStructure):
                 Pymatgen uses the physics convention of reciprocal lattice vectors
                 WITH a 2*pi coefficient
             has_nac: specify if the band structure has been produced taking into account
-                non-analytical corrections at Gamma. If True frequenciens at Gamma from
-                diffent directions will be stored in naf. Default False.
+                non-analytical corrections at Gamma. If True frequencies at Gamma from
+                different directions will be stored in naf. Default False.
             eigendisplacements: the phonon eigendisplacements associated to the
                 frequencies in Cartesian coordinates. A numpy array of complex
                 numbers with shape (3*len(structure), len(qpoints), len(structure), 3).
@@ -348,7 +342,6 @@ class PhononBandStructureSymmLine(PhononBandStructure):
                 associated with the band structure. This is needed if we
                 provide projections to the band structure
         """
-
         super().__init__(
             qpoints=qpoints,
             frequencies=frequencies,
@@ -381,11 +374,10 @@ class PhononBandStructureSymmLine(PhononBandStructure):
                 )
             previous_qpoint = self.qpoints[i]
             previous_distance = self.distance[i]
-            if label:
-                if previous_label:
-                    if len(one_group) != 0:
-                        branches_tmp.append(one_group)
-                    one_group = []
+            if label and previous_label:
+                if len(one_group) != 0:
+                    branches_tmp.append(one_group)
+                one_group = []
             previous_label = label
             one_group.append(i)
         if len(one_group) != 0:
@@ -419,8 +411,8 @@ class PhononBandStructureSymmLine(PhononBandStructure):
                         if self.has_eigendisplacements:
                             nac_eigendisplacements.append((direction, eigendisplacements[:, i]))
 
-            self.nac_frequencies = np.array(naf)
-            self.nac_eigendisplacements = np.array(nac_eigendisplacements)
+            self.nac_frequencies = np.array(naf, dtype=object)
+            self.nac_eigendisplacements = np.array(nac_eigendisplacements, dtype=object)
 
     def get_equivalent_qpoints(self, index):
         """
@@ -600,9 +592,7 @@ class PhononBandStructureSymmLine(PhononBandStructure):
 
     def as_dict(self):
         """
-
         Returns: MSONable dict
-
         """
         d = super().as_dict()
         # remove nac_frequencies and nac_eigendisplacements as they are reconstructed
@@ -615,12 +605,10 @@ class PhononBandStructureSymmLine(PhononBandStructure):
     @classmethod
     def from_dict(cls, d):
         """
-
         Args:
             d: Dict representation
 
         Returns: PhononBandStructureSummLine
-
         """
         lattice_rec = Lattice(d["lattice_rec"]["matrix"])
         eigendisplacements = np.array(d["eigendisplacements"]["real"]) + np.array(d["eigendisplacements"]["imag"]) * 1j

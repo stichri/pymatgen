@@ -1,6 +1,3 @@
-# Copyright (c) Pymatgen Development Team.
-# Distributed under the terms of the MIT License.
-
 """
 This module provides classes for calculating the Ewald sum of a structure.
 """
@@ -100,15 +97,15 @@ class EwaldSummation(MSONable):
 
         self._acc_factor = acc_factor
         # set screening length
-        self._eta = eta if eta else (len(structure) * w / (self._vol**2)) ** (1 / 3) * pi
+        self._eta = eta or (len(structure) * w / (self._vol**2)) ** (1 / 3) * pi
         self._sqrt_eta = sqrt(self._eta)
 
         # acc factor used to automatically determine the optimal real and
         # reciprocal space cutoff radii
         self._accf = sqrt(log(10**acc_factor))
 
-        self._rmax = real_space_cut if real_space_cut else self._accf / self._sqrt_eta
-        self._gmax = recip_space_cut if recip_space_cut else 2 * self._sqrt_eta * self._accf
+        self._rmax = real_space_cut or self._accf / self._sqrt_eta
+        self._gmax = recip_space_cut or 2 * self._sqrt_eta * self._accf
 
         # The next few lines pre-compute certain quantities and store them.
         # Ewald summation is rather expensive, and these shortcuts are
@@ -135,12 +132,12 @@ class EwaldSummation(MSONable):
         out.
         """
         total_energy_matrix = self.total_energy_matrix.copy()
-        for i in removed_indices:
-            total_energy_matrix[i, :] = 0
-            total_energy_matrix[:, i] = 0
+        for idx in removed_indices:
+            total_energy_matrix[idx, :] = 0
+            total_energy_matrix[:, idx] = 0
         return sum(sum(total_energy_matrix))
 
-    def compute_sub_structure(self, sub_structure, tol=1e-3):
+    def compute_sub_structure(self, sub_structure, tol: float = 1e-3):
         """
         Gives total Ewald energy for an sub structure in the same
         lattice. The sub_structure must be a subset of the original
@@ -210,7 +207,7 @@ class EwaldSummation(MSONable):
     @property
     def real_space_energy(self):
         """
-        The real space space energy.
+        The real space energy.
         """
         if not self._initialized:
             self._calc_ewald_terms()
@@ -297,7 +294,8 @@ class EwaldSummation(MSONable):
         Args:
             site_index (int): Index of site
         ReturnS:
-            (float) - Energy of that site"""
+        (float) - Energy of that site
+        """
         if not self._initialized:
             self._calc_ewald_terms()
             self._initialized = True
@@ -351,7 +349,6 @@ class EwaldSummation(MSONable):
         simags = np.sum(oxistates[None, :] * np.sin(grs), 1)
 
         for g, g2, gr, expval, sreal, simag in zip(gs, g2s, grs, expvals, sreals, simags):
-
             # Uses the identity sin(x)+cos(x) = 2**0.5 sin(x + pi/4)
             m = (gr[None, :] + pi / 4) - gr[:, None]
             np.sin(m, m)
@@ -453,7 +450,6 @@ class EwaldSummation(MSONable):
             verbosity (int): Verbosity level. Default of 0 only includes the
                 matrix representation. Set to 1 for more details.
         """
-
         d = {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
@@ -472,7 +468,7 @@ class EwaldSummation(MSONable):
         return d
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any], fmt: str = None, **kwargs) -> EwaldSummation:
+    def from_dict(cls, d: dict[str, Any], fmt: str | None = None, **kwargs) -> EwaldSummation:
         """Create an EwaldSummation instance from JSON-serialized dictionary.
 
         Args:
@@ -551,11 +547,11 @@ class EwaldMinimizer:
         # Setup and checking of inputs
         self._matrix = copy(matrix)
         # Make the matrix diagonally symmetric (so matrix[i,:] == matrix[:,j])
-        for i in range(len(self._matrix)):
-            for j in range(i, len(self._matrix)):
-                value = (self._matrix[i, j] + self._matrix[j, i]) / 2
-                self._matrix[i, j] = value
-                self._matrix[j, i] = value
+        for ii in range(len(self._matrix)):
+            for jj in range(ii, len(self._matrix)):
+                value = (self._matrix[ii, jj] + self._matrix[jj, ii]) / 2
+                self._matrix[ii, jj] = value
+                self._matrix[jj, ii] = value
 
         # sort the m_list based on number of permutations
         self._m_list = sorted(m_list, key=lambda x: comb(len(x[2]), x[1]), reverse=True)
@@ -570,7 +566,7 @@ class EwaldMinimizer:
             raise NotImplementedError("Complete algo not yet implemented for EwaldMinimizer")
 
         self._output_lists = []
-        # Tag that the recurse function looks at at each level. If a method
+        # Tag that the recurse function looks at each level. If a method
         # sets this to true it breaks the recursion and stops the search.
         self._finished = False
 
@@ -671,10 +667,7 @@ class EwaldMinimizer:
         f = manipulation[0]
         indices = list(indices_left.intersection(manipulation[2]))
         sums = np.sum(matrix[indices], axis=1)
-        if f < 1:
-            next_index = indices[sums.argmax(axis=0)]
-        else:
-            next_index = indices[sums.argmin(axis=0)]
+        next_index = indices[sums.argmax(axis=0)] if f < 1 else indices[sums.argmin(axis=0)]
 
         return next_index
 
@@ -712,9 +705,8 @@ class EwaldMinimizer:
         if m_list[-1][1] > len(indices.intersection(m_list[-1][2])):
             return
 
-        if len(m_list) == 1 or m_list[-1][1] > 1:
-            if self.best_case(matrix, m_list, indices) > self._current_minimum:
-                return
+        if (len(m_list) == 1 or m_list[-1][1] > 1) and self.best_case(matrix, m_list, indices) > self._current_minimum:
+            return
 
         index = self.get_next_index(matrix, m_list[-1], indices)
 
