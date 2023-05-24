@@ -21,10 +21,7 @@ from pymatgen.entries.compatibility import (
     CompatibilityError,
     MaterialsProject2020Compatibility,
 )
-from pymatgen.entries.computed_entries import (
-    ComputedStructureEntry,
-    ConstantEnergyAdjustment,
-)
+from pymatgen.entries.computed_entries import ComputedStructureEntry, ConstantEnergyAdjustment
 from pymatgen.entries.entry_tools import EntrySet
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -738,7 +735,7 @@ class MaterialsProjectDFTMixingScheme(Compatibility):
         try:
             pd = PhaseDiagram(entries)
         except ValueError:
-            return None
+            return
 
         print(
             f"{'entry_id':<12}{'formula':<12}{'spacegroup':<12}{'run_type':<10}{'eV/atom':<8}"
@@ -750,4 +747,4 @@ class MaterialsProjectDFTMixingScheme(Compatibility):
                 f"{e.parameters['run_type']:<10}{e.energy_per_atom:<8.3f}"
                 f"{e.correction / e.composition.num_atoms:<9.3f} {pd.get_e_above_hull(e):<9.3f}"
             )
-        return None
+        return

@@ -17,10 +17,9 @@ from dataclasses import dataclass
 from glob import glob
 from io import StringIO
 from pathlib import Path
-from typing import DefaultDict, Literal
+from typing import Literal
 
 import numpy as np
-from monty.dev import deprecated
 from monty.io import reverse_readfile, zopen
 from monty.json import MSONable, jsanitize
 from monty.os.path import zpath
@@ -854,7 +853,7 @@ class Vasprun(MSONable):
         efermi: float | Literal["smart"] | None = None,
         line_mode: bool = False,
         force_hybrid_mode: bool = False,
-    ):
+    ) -> BandStructureSymmLine | BandStructure:
         """Get the band structure as a BandStructure object.
 
         Args:
@@ -906,10 +905,10 @@ class Vasprun(MSONable):
             kpoint_file = Kpoints.from_file(kpoints_filename)
         lattice_new = Lattice(self.final_structure.lattice.reciprocal_lattice.matrix)
 
-        kpoints = [np.array(self.actual_kpoints[i]) for i in range(len(self.actual_kpoints))]
+        kpoints = [np.array(kpt) for kpt in self.actual_kpoints]
 
-        p_eigenvals: DefaultDict[Spin, list] = defaultdict(list)
-        eigenvals: DefaultDict[Spin, list] = defaultdict(list)
+        p_eigenvals: defaultdict[Spin, list] = defaultdict(list)
+        eigenvals: defaultdict[Spin, list] = defaultdict(list)
 
         nkpts = len(kpoints)
 
@@ -987,12 +986,12 @@ class Vasprun(MSONable):
                 projections=p_eigenvals,
             )
         return BandStructure(
-            kpoints,  # type: ignore
-            eigenvals,  # type: ignore
+            kpoints,  # type: ignore[arg-type]
+            eigenvals,  # type: ignore[arg-type]
             lattice_new,
             e_fermi,
             structure=self.final_structure,
-            projections=p_eigenvals,  # type: ignore
+            projections=p_eigenvals,  # type: ignore[arg-type]
         )
 
     @property
@@ -2334,14 +2333,6 @@ class Outcar:
         self.dielectric_energies = np.array(energies)
         self.dielectric_tensor_function = np.array(data["REAL"]) + 1j * np.array(data["IMAGINARY"])
 
-    @property  # type: ignore
-    @deprecated(message="frequencies has been renamed to dielectric_energies.")
-    def frequencies(self):
-        """
-        Renamed to dielectric energies.
-        """
-        return self.dielectric_energies
-
     def read_chemical_shielding(self):
         """
         Parse the NMR chemical shieldings data. Only the second part "absolute, valence and core"
@@ -2669,7 +2660,7 @@ class Outcar:
             search.append(
                 [
                     r"^ *e<r>_bp=\( *([-0-9.Ee+]*) *([-0-9.Ee+]*) *([-0-9.Ee+]*) *\)",
-                    lambda results, line: results.context == 2,
+                    lambda results, _line: results.context == 2,
                     er_bp,
                 ]
             )
@@ -2699,7 +2690,7 @@ class Outcar:
             search.append(
                 [
                     r"^ *e<r>_bp=\( *([-0-9.Ee+]*) *([-0-9.Ee+]*) *([-0-9.Ee+]*) *\)",
-                    lambda results, line: results.context == Spin.up,
+                    lambda results, _line: results.context == Spin.up,
                     er_bp_up,
                 ]
             )
@@ -2728,7 +2719,7 @@ class Outcar:
             search.append(
                 [
                     r"^ *e<r>_bp=\( *([-0-9.Ee+]*) *([-0-9.Ee+]*) *([-0-9.Ee+]*) *\)",
-                    lambda results, line: results.context == Spin.down,
+                    lambda results, _line: results.context == Spin.down,
                     er_bp_dn,
                 ]
             )
@@ -2812,7 +2803,7 @@ class Outcar:
         search.append(
             [
                 r"^\s+([x,y,z])\s+" + r"([-]?\d+\.\d+)\s+" * 6,
-                lambda results, line: results.internal_strain_ion is not None,
+                lambda results, _line: results.internal_strain_ion is not None,
                 internal_strain_data,
             ]
         )
@@ -2847,7 +2838,7 @@ class Outcar:
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.dielectric_index == -1,
+                    lambda results, _line: results.dielectric_index == -1,
                     dielectric_section_start2,
                 ]
             )
@@ -2861,7 +2852,7 @@ class Outcar:
             search.append(
                 [
                     r"^ *([-0-9.Ee+]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+) *$",
-                    lambda results, line: results.dielectric_index >= 0
+                    lambda results, _line: results.dielectric_index >= 0
                     if results.dielectric_index is not None
                     else None,
                     dielectric_data,
@@ -2874,7 +2865,7 @@ class Outcar:
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.dielectric_index >= 1
+                    lambda results, _line: results.dielectric_index >= 1
                     if results.dielectric_index is not None
                     else None,
                     dielectric_section_stop,
@@ -2884,7 +2875,7 @@ class Outcar:
             self.dielectric_index = None
             self.dielectric_tensor = np.zeros((3, 3))
 
-            def piezo_section_start(results, match):
+            def piezo_section_start(results, _match):
                 results.piezo_index = 0
 
             search.append(
@@ -2903,18 +2894,18 @@ class Outcar:
                 [
                     r"^ *[xyz] +([-0-9.Ee+]+) +([-0-9.Ee+]+)"
                     r" +([-0-9.Ee+]+) *([-0-9.Ee+]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+)*$",
-                    lambda results, line: results.piezo_index >= 0 if results.piezo_index is not None else None,
+                    lambda results, _line: results.piezo_index >= 0 if results.piezo_index is not None else None,
                     piezo_data,
                 ]
             )
 
-            def piezo_section_stop(results, match):
+            def piezo_section_stop(results, _match):
                 results.piezo_index = None
 
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.piezo_index >= 1 if results.piezo_index is not None else None,
+                    lambda results, _line: results.piezo_index >= 1 if results.piezo_index is not None else None,
                     piezo_section_stop,
                 ]
             )
@@ -2922,7 +2913,7 @@ class Outcar:
             self.piezo_index = None
             self.piezo_tensor = np.zeros((3, 6))
 
-            def born_section_start(results, match):
+            def born_section_start(results, _match):
                 results.born_ion = -1
 
             search.append([r"BORN EFFECTIVE CHARGES ", None, born_section_start])
@@ -2934,7 +2925,7 @@ class Outcar:
             search.append(
                 [
                     r"ion +([0-9]+)",
-                    lambda results, line: results.born_ion is not None,
+                    lambda results, _line: results.born_ion is not None,
                     born_ion,
                 ]
             )
@@ -2947,18 +2938,18 @@ class Outcar:
             search.append(
                 [
                     r"^ *([1-3]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+)$",
-                    lambda results, line: results.born_ion >= 0 if results.born_ion is not None else results.born_ion,
+                    lambda results, _line: results.born_ion >= 0 if results.born_ion is not None else results.born_ion,
                     born_data,
                 ]
             )
 
-            def born_section_stop(results, match):
+            def born_section_stop(results, _match):
                 results.born_ion = None
 
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.born_ion >= 1 if results.born_ion is not None else results.born_ion,
+                    lambda results, _line: results.born_ion >= 1 if results.born_ion is not None else results.born_ion,
                     born_section_stop,
                 ]
             )
@@ -2985,7 +2976,7 @@ class Outcar:
         try:
             search = []
 
-            def dielectric_section_start(results, match):
+            def dielectric_section_start(results, _match):
                 results.dielectric_ionic_index = -1
 
             search.append(
@@ -2996,13 +2987,13 @@ class Outcar:
                 ]
             )
 
-            def dielectric_section_start2(results, match):
+            def dielectric_section_start2(results, _match):
                 results.dielectric_ionic_index = 0
 
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.dielectric_ionic_index == -1
+                    lambda results, _line: results.dielectric_ionic_index == -1
                     if results.dielectric_ionic_index is not None
                     else results.dielectric_ionic_index,
                     dielectric_section_start2,
@@ -3018,20 +3009,20 @@ class Outcar:
             search.append(
                 [
                     r"^ *([-0-9.Ee+]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+) *$",
-                    lambda results, line: results.dielectric_ionic_index >= 0
+                    lambda results, _line: results.dielectric_ionic_index >= 0
                     if results.dielectric_ionic_index is not None
                     else results.dielectric_ionic_index,
                     dielectric_data,
                 ]
             )
 
-            def dielectric_section_stop(results, match):
+            def dielectric_section_stop(results, _match):
                 results.dielectric_ionic_index = None
 
             search.append(
                 [
                     r"-------------------------------------",
-                    lambda results, line: results.dielectric_ionic_index >= 1
+                    lambda results, _line: results.dielectric_ionic_index >= 1
                     if results.dielectric_ionic_index is not None
                     else results.dielectric_ionic_index,
                     dielectric_section_stop,
@@ -3041,7 +3032,7 @@ class Outcar:
             self.dielectric_ionic_index = None
             self.dielectric_ionic_tensor = np.zeros((3, 3))
 
-            def piezo_section_start(results, match):
+            def piezo_section_start(results, _match):
                 results.piezo_ionic_index = 0
 
             search.append(
@@ -3062,20 +3053,20 @@ class Outcar:
                 [
                     r"^ *[xyz] +([-0-9.Ee+]+) +([-0-9.Ee+]+)"
                     r" +([-0-9.Ee+]+) *([-0-9.Ee+]+) +([-0-9.Ee+]+) +([-0-9.Ee+]+)*$",
-                    lambda results, line: results.piezo_ionic_index >= 0
+                    lambda results, _line: results.piezo_ionic_index >= 0
                     if results.piezo_ionic_index is not None
                     else results.piezo_ionic_index,
                     piezo_data,
                 ]
             )
 
-            def piezo_section_stop(results, match):
+            def piezo_section_stop(results, _match):
                 results.piezo_ionic_index = None
 
             search.append(
                 [
                     "-------------------------------------",
-                    lambda results, line: results.piezo_ionic_index >= 1
+                    lambda results, _line: results.piezo_ionic_index >= 1
                     if results.piezo_ionic_index is not None
                     else results.piezo_ionic_index,
                     piezo_section_stop,

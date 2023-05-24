@@ -9,14 +9,16 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from argparse import Namespace
 from glob import glob
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from urllib.request import urlretrieve
 
 from monty.serialization import dumpfn, loadfn
 
 from pymatgen.core import OLD_SETTINGS_FILE, SETTINGS_FILE
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 
 def setup_cp2k_data(cp2k_data_dirs: list[str]) -> None:
@@ -162,7 +164,7 @@ def setup_potcars(potcar_dirs: list[str]):
                     with subprocess.Popen(["gzip", "-f", dest]) as p:
                         p.communicate()
                 except Exception as ex:
-                    print(f"An error has occurred. Message is {str(ex)}. Trying to continue... ")
+                    print(f"An error has occurred. Message is {ex!s}. Trying to continue... ")
 
     print(
         "\nPSP resources directory generated. It is recommended that you "
@@ -270,17 +272,17 @@ def add_config_var(tokens: list[str], backup_suffix: str) -> None:
     else:
         # if neither exists, create new config file
         fpath = SETTINGS_FILE
-    d = {}
+    dct = {}
     if os.path.exists(fpath):
         if backup_suffix:
             shutil.copy(fpath, fpath + backup_suffix)
             print(f"Existing {fpath} backed up to {fpath}{backup_suffix}")
-        d = loadfn(fpath)
+        dct = loadfn(fpath)
     if len(tokens) % 2 != 0:
         raise ValueError(f"Uneven number {len(tokens)} of tokens passed to pmg config. Needs a value for every key.")
     for key, val in zip(tokens[0::2], tokens[1::2]):
-        d[key] = val
-    dumpfn(d, fpath)
+        dct[key] = val
+    dumpfn(dct, fpath)
     print(f"New {fpath} written!")
 
 

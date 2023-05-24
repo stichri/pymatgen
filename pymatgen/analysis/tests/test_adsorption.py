@@ -4,12 +4,7 @@ import unittest
 
 import numpy as np
 
-from pymatgen.analysis.adsorption import (
-    AdsorbateSiteFinder,
-    generate_all_slabs,
-    get_rot,
-    reorient_z,
-)
+from pymatgen.analysis.adsorption import AdsorbateSiteFinder, generate_all_slabs, get_rot, reorient_z
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Molecule, Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
@@ -110,7 +105,7 @@ class AdsorbateSiteFinderTest(PymatgenTest):
         # Check translation
         sites = self.asf_211.find_adsorption_sites()
         ads_site_coords = sites["all"][0]
-        c_site = structures[0].sites[-2]
+        c_site = structures[0][-2]
         assert str(c_site.specie) == "C"
         self.assertArrayAlmostEqual(c_site.coords, sites["all"][0])
         # Check no translation
@@ -118,7 +113,7 @@ class AdsorbateSiteFinderTest(PymatgenTest):
         assert co == Molecule("CO", [[1.0, -0.5, 3], [0.8, 0.46, 3.75]])
         sites = self.asf_111.find_adsorption_sites()
         ads_site_coords = sites["all"][0]
-        c_site = structures[0].sites[-2]
+        c_site = structures[0][-2]
         self.assertArrayAlmostEqual(c_site.coords, ads_site_coords + np.array([1.0, -0.5, 3]))
 
     def test_adsorb_both_surfaces(self):

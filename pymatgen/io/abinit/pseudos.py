@@ -14,8 +14,6 @@ from collections import defaultdict, namedtuple
 
 import numpy as np
 from monty.collections import AttrDict, Namespace
-
-# from monty.dev import deprecated
 from monty.functools import lazy_property
 from monty.itertools import iterator_from_slice
 from monty.json import MontyDecoder, MSONable
@@ -936,7 +934,7 @@ class PawAbinitHeader(AbinitHeader):
             self[key] = value
 
         if kwargs:
-            raise RuntimeError(f"kwargs should be empty but got {str(kwargs)}")
+            raise RuntimeError(f"kwargs should be empty but got {kwargs!s}")
 
     @staticmethod
     def paw_header(filename, ppdesc):
@@ -1299,16 +1297,16 @@ class PawXmlSetup(Pseudo, PawPseudo):
         """Number of valence electrons."""
         return self.valence
 
-    # FIXME
     @property
     def l_max(self):
         """Maximum angular momentum."""
-        return None
+        # TODO return an actual value
+        return
 
     @property
     def l_local(self):
         """Angular momentum used for the local part."""
-        return None
+        return
 
     @property
     def summary(self):
@@ -1654,7 +1652,7 @@ class PseudoTable(collections.abc.Sequence, MSONable):
             symbols = [p.symbol for p in pseudo_list]
             symbol = symbols[0]
             if any(symb != symbol for symb in symbols):
-                raise ValueError(f"All symbols must be equal while they are: {str(symbols)}")
+                raise ValueError(f"All symbols must be equal while they are: {symbols!s}")
 
             setattr(self, symbol, pseudo_list)
 
@@ -1707,18 +1705,18 @@ class PseudoTable(collections.abc.Sequence, MSONable):
 
     def as_dict(self, **kwargs):
         """Return dictionary for MSONable protocol."""
-        d = {}
+        dct = {}
         for p in self:
             k, count = p.element.name, 1
             # k, count = p.element, 1
             # Handle multiple-pseudos with the same name!
-            while k in d:
+            while k in dct:
                 k += k.split("#")[0] + "#" + str(count)
                 count += 1
-            d.update({k: p.as_dict()})
-        d["@module"] = type(self).__module__
-        d["@class"] = type(self).__name__
-        return d
+            dct.update({k: p.as_dict()})
+        dct["@module"] = type(self).__module__
+        dct["@class"] = type(self).__name__
+        return dct
 
     @classmethod
     def from_dict(cls, d):
@@ -1746,13 +1744,13 @@ class PseudoTable(collections.abc.Sequence, MSONable):
 
             table.all_combinations_for_elements(["Li", "F"])
         """
-        d = {}
+        dct = {}
         for symbol in element_symbols:
-            d[symbol] = self.select_symbols(symbol, ret_list=True)
+            dct[symbol] = self.select_symbols(symbol, ret_list=True)
 
         from itertools import product
 
-        return list(product(*d.values()))
+        return list(product(*dct.values()))
 
     def pseudo_with_symbol(self, symbol, allow_multi=False):
         """

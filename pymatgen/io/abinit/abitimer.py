@@ -111,7 +111,7 @@ class AbinitTimerParser(collections.abc.Iterable):
         read_ok = []
         for fname in filenames:
             try:
-                fh = open(fname)  # pylint: disable=R1732
+                fh = open(fname)  # noqa: SIM115
             except OSError:
                 logger.warning(f"Cannot open file {fname}")
                 continue
@@ -176,11 +176,11 @@ class AbinitTimerParser(collections.abc.Iterable):
                 line = line[1:].strip()
 
                 if inside == 2:
-                    d = {}
+                    dct = {}
                     for tok in line.split(","):
                         key, val = (s.strip() for s in tok.split("="))
-                        d[key] = float(val)
-                    cpu_time, wall_time = d["cpu_time"], d["wall_time"]
+                        dct[key] = float(val)
+                    cpu_time, wall_time = dct["cpu_time"], dct["wall_time"]
 
                 elif inside > 5:
                     sections.append(parse_line(line))
@@ -215,7 +215,7 @@ class AbinitTimerParser(collections.abc.Iterable):
         """
         section_names = []
 
-        # FIXME this is not trivial
+        # TODO this is not trivial
         for idx, timer in enumerate(self.timers()):
             if idx == 0:
                 section_names = [s.name for s in timer.order_sections(ordkey)]
@@ -695,7 +695,7 @@ class AbinitTimer:
         openclose = is_string(fileobj)
 
         if openclose:
-            fileobj = open(fileobj, "w")  # pylint: disable=R1732
+            fileobj = open(fileobj, "w")  # noqa: SIM115
 
         for idx, section in enumerate(self.sections):
             fileobj.write(section.to_csvline(with_header=(idx == 0)))

@@ -10,7 +10,7 @@ import math
 import warnings
 from fractions import Fraction
 from functools import reduce
-from typing import Iterator, Sequence
+from typing import TYPE_CHECKING, Iterator, Sequence
 
 import numpy as np
 from monty.dev import deprecated
@@ -20,7 +20,9 @@ from numpy.linalg import inv
 
 from pymatgen.util.coord import pbc_shortest_vectors
 from pymatgen.util.num import abs_cap
-from pymatgen.util.typing import ArrayLike
+
+if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
 
 __author__ = "Shyue Ping Ong, Michael Kocher"
 __copyright__ = "Copyright 2011, The Materials Project"
@@ -1070,6 +1072,8 @@ class Lattice(MSONable):
                 this one.
             ltol (float): Tolerance for matching lengths. Defaults to 1e-5.
             atol (float): Tolerance for matching angles. Defaults to 1.
+            skip_rotation_matrix (bool): Whether to skip calculation of the rotation matrix.
+                Defaults to False.
 
         Returns:
             (aligned_lattice, rotation_matrix, scale_matrix) if a mapping is

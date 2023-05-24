@@ -10,22 +10,21 @@ import collections
 import copy
 import math
 import os
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from pymatgen.analysis.bond_valence import BVAnalyzer
-from pymatgen.analysis.chemenv.coordination_environments.coordination_geometry_finder import (
-    LocalGeometryFinder,
-)
-from pymatgen.analysis.chemenv.coordination_environments.structure_environments import (
-    LightStructureEnvironments,
-)
+from pymatgen.analysis.chemenv.coordination_environments.coordination_geometry_finder import LocalGeometryFinder
+from pymatgen.analysis.chemenv.coordination_environments.structure_environments import LightStructureEnvironments
 from pymatgen.analysis.local_env import NearNeighbors
-from pymatgen.core.structure import Structure
 from pymatgen.electronic_structure.cohp import CompleteCohp
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.electronic_structure.plotter import CohpPlotter
 from pymatgen.io.lobster import Charge, Icohplist
+
+if TYPE_CHECKING:
+    from pymatgen.core import Structure
 
 __author__ = "Janine George"
 __copyright__ = "Copyright 2021, The Materials Project"
@@ -823,10 +822,10 @@ class LobsterNeighbors(NearNeighbors):
         list_icohps = []
         list_lengths = []
         list_keys = []
-        for isite in range(len(self.structure)):
+        for idx in range(len(self.structure)):
             icohps = self._get_icohps(
                 icohpcollection=self.Icohpcollection,
-                isite=isite,
+                isite=idx,
                 lowerlimit=lowerlimit,
                 upperlimit=upperlimit,
                 only_bonds_to=only_bonds_to,
@@ -837,10 +836,10 @@ class LobsterNeighbors(NearNeighbors):
                 lengths_from_ICOHPs,
                 neighbors_from_ICOHPs,
                 selected_ICOHPs,
-            ) = self._find_relevant_atoms_additional_condition(isite, icohps, additional_condition)
+            ) = self._find_relevant_atoms_additional_condition(idx, icohps, additional_condition)
 
             if len(neighbors_from_ICOHPs) > 0:
-                centralsite = self.structure.sites[isite]
+                centralsite = self.structure[idx]
 
                 neighbors_by_distance_start = self.structure.get_sites_in_sphere(
                     pt=centralsite.coords,

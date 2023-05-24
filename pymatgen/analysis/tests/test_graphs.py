@@ -12,12 +12,7 @@ import pytest
 from monty.serialization import loadfn
 from pytest import approx
 
-from pymatgen.analysis.graphs import (
-    MoleculeGraph,
-    MolGraphSplitError,
-    PeriodicSite,
-    StructureGraph,
-)
+from pymatgen.analysis.graphs import MoleculeGraph, MolGraphSplitError, PeriodicSite, StructureGraph
 from pymatgen.analysis.local_env import (
     CovalentBondNN,
     CutOffDictNN,
@@ -845,12 +840,8 @@ class MoleculeGraphTest(unittest.TestCase):
         assert no_rings == []
 
     def test_isomorphic(self):
-        ethylene = Molecule.from_file(
-            os.path.join(
-                PymatgenTest.TEST_FILES_DIR,
-                "graphs/ethylene.xyz",
-            )
-        )
+        ethyl_xyz_path = os.path.join(PymatgenTest.TEST_FILES_DIR, "graphs/ethylene.xyz")
+        ethylene = Molecule.from_file(ethyl_xyz_path)
         # switch carbons
         ethylene[0], ethylene[1] = ethylene[1], ethylene[0]
 

@@ -32,18 +32,20 @@ import typing
 from dataclasses import dataclass, field
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Iterable, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Literal, Sequence
 
 from monty.io import zopen
 from monty.json import MSONable
 
-from pymatgen.core.lattice import Lattice
 from pymatgen.core.periodic_table import Element
-from pymatgen.core.structure import Molecule, Structure
 from pymatgen.io.cp2k.utils import chunk, postprocessor, preprocessor
 from pymatgen.io.vasp.inputs import Kpoints as VaspKpoints
 from pymatgen.io.vasp.inputs import Kpoints_supported_modes
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+if TYPE_CHECKING:
+    from pymatgen.core.lattice import Lattice
+    from pymatgen.core.structure import Molecule, Structure
 
 __author__ = "Nicholas Winner"
 __version__ = "2.0"
@@ -124,16 +126,16 @@ class Keyword(MSONable):
         """
         Get a dictionary representation of the Keyword
         """
-        d = {}
-        d["@module"] = type(self).__module__
-        d["@class"] = type(self).__name__
-        d["name"] = self.name
-        d["values"] = self.values
-        d["description"] = self.description
-        d["repeats"] = self.repeats
-        d["units"] = self.units
-        d["verbose"] = self.verbose
-        return d
+        dct = {}
+        dct["@module"] = type(self).__module__
+        dct["@class"] = type(self).__name__
+        dct["name"] = self.name
+        dct["values"] = self.values
+        dct["description"] = self.description
+        dct["repeats"] = self.repeats
+        dct["units"] = self.units
+        dct["verbose"] = self.verbose
+        return dct
 
     def get_string(self):
         """
@@ -144,7 +146,7 @@ class Keyword(MSONable):
     @classmethod
     def from_dict(cls, d):
         """
-        Initialise from dictionary
+        Initialize from dictionary
         """
         return Keyword(
             d["name"],
@@ -158,7 +160,7 @@ class Keyword(MSONable):
     @staticmethod
     def from_string(s):
         """
-        Initialise from a string.
+        Initialize from a string.
 
         Keywords must be labeled with strings. If the postprocessor finds
         that the keywords is a number, then None is return (used by
@@ -2731,9 +2733,9 @@ class GthPotential(AtomicMetadata):
         ):
             raise ValueError("Must initialize all attributes in order to get string")
 
-        out = f"{str(self.element)} {self.name} {' '.join(self.alias_names)}\n"
+        out = f"{self.element!s} {self.name} {' '.join(self.alias_names)}\n"
         out += f"{' '.join(str(self.n_elecs[i]) for i in range(len(self.n_elecs)))}\n"
-        out += f"{self.r_loc: .14f} {str(self.nexp_ppl)} "
+        out += f"{self.r_loc: .14f} {self.nexp_ppl!s} "
         for i in range(self.nexp_ppl):
             out += f"{self.c_exp_ppl[i]: .14f} "
         out += "\n"

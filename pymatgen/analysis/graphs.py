@@ -1330,10 +1330,10 @@ class StructureGraph(MSONable):
 
         if print_weights:
             for u, v, data in edges:
-                s += f"{u:4}  {v:4}  {str(data.get('to_jimage', (0, 0, 0))):12}  {data.get('weight', 0):.3e}\n"
+                s += f"{u:4}  {v:4}  {data.get('to_jimage', (0, 0, 0))!s:12}  {data.get('weight', 0):.3e}\n"
         else:
             for u, v, data in edges:
-                s += f"{u:4}  {v:4}  {str(data.get('to_jimage', (0, 0, 0))):12}\n"
+                s += f"{u:4}  {v:4}  {data.get('to_jimage', (0, 0, 0))!s:12}\n"
 
         return s
 
@@ -2434,15 +2434,15 @@ class MoleculeGraph(MSONable):
         cycles_edges = []
 
         # Remove all two-edge cycles
-        all_cycles = [c for c in nx.simple_cycles(directed) if len(c) > 2]
+        all_cycles = [sorted(cycle) for cycle in nx.simple_cycles(directed) if len(cycle) > 2]
 
         # Using to_directed() will mean that each cycle always appears twice
         # So, we must also remove duplicates
         unique_sorted = []
         unique_cycles = []
         for cycle in all_cycles:
-            if sorted(cycle) not in unique_sorted:
-                unique_sorted.append(sorted(cycle))
+            if cycle not in unique_sorted:
+                unique_sorted.append(cycle)
                 unique_cycles.append(cycle)
 
         if including is None:
@@ -2732,10 +2732,10 @@ class MoleculeGraph(MSONable):
 
         if print_weights:
             for u, v, data in edges:
-                s += f"{u:4}  {v:4}  {str(data.get('to_jimage', (0, 0, 0))):12}  {data.get('weight', 0):.3e}\n"
+                s += f"{u:4}  {v:4}  {data.get('to_jimage', (0, 0, 0))!s:12}  {data.get('weight', 0):.3e}\n"
         else:
             for u, v, data in edges:
-                s += f"{u:4}  {v:4}  {str(data.get('to_jimage', (0, 0, 0))):12}\n"
+                s += f"{u:4}  {v:4}  {data.get('to_jimage', (0, 0, 0))!s:12}\n"
 
         return s
 
