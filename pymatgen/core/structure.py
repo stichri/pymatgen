@@ -1380,12 +1380,13 @@ class IStructure(SiteCollection, MSONable):
             site_coords = np.array([site.coords for site in sites], dtype=float)
             cart_coords = np.ascontiguousarray(np.array(self.cart_coords), dtype=float)
             lattice_matrix = np.ascontiguousarray(np.array(self.lattice.matrix), dtype=float)
+            pbc = np.ascontiguousarray(self.pbc, dtype=int)
             r = float(r)
             center_indices, points_indices, images, distances = find_points_in_spheres(
                 cart_coords,
                 site_coords,
                 r=r,
-                pbc=np.array(self.pbc, dtype=int),
+                pbc=pbc,
                 lattice=lattice_matrix,
                 tol=numerical_tol,
             )
@@ -2268,12 +2269,9 @@ class IStructure(SiteCollection, MSONable):
     def __repr__(self):
         outs = ["Structure Summary", repr(self.lattice)]
         if self._charge:
-            if self._charge >= 0:
-                outs.append(f"Overall Charge: +{self._charge}")
-            else:
-                outs.append(f"Overall Charge: -{self._charge}")
-        for s in self:
-            outs.append(repr(s))
+            outs.append(f"Overall Charge: {self._charge:+}")
+        for site in self:
+            outs.append(repr(site))
         return "\n".join(outs)
 
     def __str__(self):
@@ -2282,24 +2280,21 @@ class IStructure(SiteCollection, MSONable):
             f"Reduced Formula: {self.composition.reduced_formula}",
         ]
 
-        def to_s(x):
-            return f"{x:0.6f}"
+        def to_str(x):
+            return f"{x:>10.6f}"
 
-        outs.append("abc   : " + " ".join(to_s(i).rjust(10) for i in self.lattice.abc))
-        outs.append("angles: " + " ".join(to_s(i).rjust(10) for i in self.lattice.angles))
+        outs.append("abc   : " + " ".join(to_str(i) for i in self.lattice.abc))
+        outs.append("angles: " + " ".join(to_str(i) for i in self.lattice.angles))
         outs.append("pbc   : " + " ".join(str(p).rjust(10) for p in self.lattice.pbc))
         if self._charge:
-            if self._charge >= 0:
-                outs.append(f"Overall Charge: +{self._charge}")
-            else:
-                outs.append(f"Overall Charge: -{self._charge}")
+            outs.append(f"Overall Charge: {self._charge:+}")
         outs.append(f"Sites ({len(self)})")
         data = []
         props = self.site_properties
         keys = sorted(props)
         for i, site in enumerate(self):
             row = [str(i), site.species_string]
-            row.extend([to_s(j) for j in site.frac_coords])
+            row.extend([to_str(j) for j in site.frac_coords])
             for k in keys:
                 row.append(props[k][i])
             data.append(row)
@@ -2356,7 +2351,7 @@ class IStructure(SiteCollection, MSONable):
             return [run_mcsqs(self, **kwargs).bestsqs]
         raise ValueError("Invalid mode!")
 
-    def as_dict(self, verbosity=1, fmt=None, **kwargs):
+    def as_dict(self, verbosity=1, fmt=None, **kwargs) -> dict[str, Any]:
         """
         Dict representation of Structure.
 
@@ -2385,21 +2380,21 @@ class IStructure(SiteCollection, MSONable):
         latt_dict = self._lattice.as_dict(verbosity=verbosity)
         del latt_dict["@module"]
         del latt_dict["@class"]
-
-        d = {
+        sites = []
+        dct = {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
             "charge": self.charge,
             "lattice": latt_dict,
-            "sites": [],
         }
         for site in self:
-            site_dict = site.as_dict(verbosity=verbosity)
+            site_dict = site.as_dict(verbosity=verbosity)  # type: ignore[call-arg]
             del site_dict["lattice"]
             del site_dict["@module"]
             del site_dict["@class"]
-            d["sites"].append(site_dict)
-        return d
+            sites.append(site_dict)
+        dct["sites"] = sites
+        return dct
 
     def as_dataframe(self):
         """
