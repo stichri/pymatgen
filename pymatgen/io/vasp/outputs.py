@@ -4148,6 +4148,14 @@ class Xdatcar:
             ionicstep_end (int): Ending number of ionic step.
             comment (str): Optional comment attached to this set of structures.
         """
+        self.structures, self.comment = self._parse_xdat(
+            zopen(filename, "rt"),
+            ionicstep_start=ionicstep_start,
+            ionicstep_end=ionicstep_end,
+            comment=comment
+        )
+
+    def _parse_xdat(self, file, ionicstep_start=1, ionicstep_end=None, comment=None):
         preamble = None
         coords_str = []
         structures = []
@@ -4159,60 +4167,59 @@ class Xdatcar:
 
         # pylint: disable=E1136
         ionicstep_cnt = 1
-        with zopen(filename, "rt") as file:
-            for line in file:
-                line = line.strip()
-                if preamble is None:
-                    preamble = [line]
-                    title = line
-                elif title == line:
-                    preamble_done = False
-                    p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
-                    if ionicstep_end is None:
-                        if ionicstep_cnt >= ionicstep_start:
-                            structures.append(p.structure)
-                    else:
-                        if ionicstep_start <= ionicstep_cnt < ionicstep_end:
-                            structures.append(p.structure)
-                        if ionicstep_cnt >= ionicstep_end:
-                            break
-                    ionicstep_cnt += 1
-                    coords_str = []
-                    preamble = [line]
-                elif not preamble_done:
-                    if line == "" or "Direct configuration=" in line:
-                        preamble_done = True
-                        tmp_preamble = [preamble[0]]
-                        for i in range(1, len(preamble)):
-                            if preamble[0] != preamble[i]:
-                                tmp_preamble.append(preamble[i])
-                            else:
-                                break
-                        preamble = tmp_preamble
-                    else:
-                        preamble.append(line)
-                elif line == "" or "Direct configuration=" in line:
-                    p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
-                    if ionicstep_end is None:
-                        if ionicstep_cnt >= ionicstep_start:
-                            structures.append(p.structure)
-                    else:
-                        if ionicstep_start <= ionicstep_cnt < ionicstep_end:
-                            structures.append(p.structure)
-                        if ionicstep_cnt >= ionicstep_end:
-                            break
-                    ionicstep_cnt += 1
-                    coords_str = []
+        for line in file:
+            line = line.strip()
+            if preamble is None:
+                preamble = [line]
+                title = line
+            elif title == line:
+                preamble_done = False
+                p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+                if ionicstep_end is None:
+                    if ionicstep_cnt >= ionicstep_start:
+                        structures.append(p.structure)
                 else:
-                    coords_str.append(line)
-            p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
-            if ionicstep_end is None:
-                if ionicstep_cnt >= ionicstep_start:
-                    structures.append(p.structure)
-            elif ionicstep_start <= ionicstep_cnt < ionicstep_end:
+                    if ionicstep_start <= ionicstep_cnt < ionicstep_end:
+                        structures.append(p.structure)
+                    if ionicstep_cnt >= ionicstep_end:
+                        break
+                ionicstep_cnt += 1
+                coords_str = []
+                preamble = [line]
+            elif not preamble_done:
+                if line == "" or "Direct configuration=" in line:
+                    preamble_done = True
+                    tmp_preamble = [preamble[0]]
+                    for i in range(1, len(preamble)):
+                        if preamble[0] != preamble[i]:
+                            tmp_preamble.append(preamble[i])
+                        else:
+                            break
+                    preamble = tmp_preamble
+                else:
+                    preamble.append(line)
+            elif line == "" or "Direct configuration=" in line:
+                p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+                if ionicstep_end is None:
+                    if ionicstep_cnt >= ionicstep_start:
+                        structures.append(p.structure)
+                else:
+                    if ionicstep_start <= ionicstep_cnt < ionicstep_end:
+                        structures.append(p.structure)
+                    if ionicstep_cnt >= ionicstep_end:
+                        break
+                ionicstep_cnt += 1
+                coords_str = []
+            else:
+                coords_str.append(line)
+        p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+        if ionicstep_end is None:
+            if ionicstep_cnt >= ionicstep_start:
                 structures.append(p.structure)
-        self.structures = structures
-        self.comment = comment or self.structures[0].formula
+        elif ionicstep_start <= ionicstep_cnt < ionicstep_end:
+            structures.append(p.structure)
+        comment = comment or structures[0].formula
+        return structures, comment
 
     @property
     def site_symbols(self):
