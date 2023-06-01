@@ -4,6 +4,7 @@ Classes for reading/manipulating/writing VASP output files.
 
 from __future__ import annotations
 
+import gc
 import datetime
 import itertools
 import logging
@@ -4138,7 +4139,13 @@ class Xdatcar:
     Authors: Ram Balachandran
     """
 
-    def __init__(self, filename, ionicstep_start=1, ionicstep_end=None, comment=None):
+    def __init__(
+            self,
+            filename,
+            ionicstep_start=1,
+            ionicstep_end=None,
+            comment=None
+    ):
         """
         Init a Xdatcar.
 
@@ -4148,18 +4155,19 @@ class Xdatcar:
             ionicstep_end (int): Ending number of ionic step.
             comment (str): Optional comment attached to this set of structures.
         """
+        self.preamble = None
+        self.preamble_done = False
         self.structures, self.comment = self._parse_xdat(
-            zopen(filename, "rt"),
-            ionicstep_start=ionicstep_start,
-            ionicstep_end=ionicstep_end,
-            comment=comment
-        )
+                zopen(filename, "rt"),
+                ionicstep_start=ionicstep_start,
+                ionicstep_end=ionicstep_end,
+                comment=comment
+            )
+
 
     def _parse_xdat(self, file, ionicstep_start=1, ionicstep_end=None, comment=None):
-        preamble = None
         coords_str = []
         structures = []
-        preamble_done = False
         if ionicstep_start < 1:
             raise Exception("Start ionic step cannot be less than 1")
         if ionicstep_end is not None and ionicstep_start < 1:
@@ -4169,12 +4177,12 @@ class Xdatcar:
         ionicstep_cnt = 1
         for line in file:
             line = line.strip()
-            if preamble is None:
-                preamble = [line]
+            if self.preamble is None:
+                self.preamble = [line]
                 title = line
             elif title == line:
-                preamble_done = False
-                p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+                self.preamble_done = False
+                p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
                 if ionicstep_end is None:
                     if ionicstep_cnt >= ionicstep_start:
                         structures.append(p.structure)
@@ -4185,21 +4193,21 @@ class Xdatcar:
                         break
                 ionicstep_cnt += 1
                 coords_str = []
-                preamble = [line]
-            elif not preamble_done:
+                self.preamble = [line]
+            elif not self.preamble_done:
                 if line == "" or "Direct configuration=" in line:
-                    preamble_done = True
-                    tmp_preamble = [preamble[0]]
-                    for i in range(1, len(preamble)):
-                        if preamble[0] != preamble[i]:
-                            tmp_preamble.append(preamble[i])
+                    self.preamble_done = True
+                    tmp_preamble = [self.preamble[0]]
+                    for i in range(1, len(self.preamble)):
+                        if self.preamble[0] != self.preamble[i]:
+                            tmp_preamble.append(self.preamble[i])
                         else:
                             break
-                    preamble = tmp_preamble
+                    self.preamble = tmp_preamble
                 else:
-                    preamble.append(line)
+                    self.preamble.append(line)
             elif line == "" or "Direct configuration=" in line:
-                p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+                p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
                 if ionicstep_end is None:
                     if ionicstep_cnt >= ionicstep_start:
                         structures.append(p.structure)
@@ -4212,7 +4220,7 @@ class Xdatcar:
                 coords_str = []
             else:
                 coords_str.append(line)
-        p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+        p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
         if ionicstep_end is None:
             if ionicstep_cnt >= ionicstep_start:
                 structures.append(p.structure)
@@ -4220,6 +4228,10 @@ class Xdatcar:
             structures.append(p.structure)
         comment = comment or structures[0].formula
         return structures, comment
+
+    def __iter__(self):
+        for strctr in self.structures:
+            yield strctr
 
     @property
     def site_symbols(self):
