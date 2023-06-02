@@ -185,8 +185,8 @@ class EXYZ(XYZ):
     }
     _type2code = {
         bool : "L",
-        int : "I", np.int : "I", np.int64 : "I", np.int32 : "I", np.int16 : "I", np.int8 : "I",
-        float : "R", np.float : "R", np.float128 : "R", np.float64 : "R", np.float16 : "R",
+        int : "I", np.int64 : "I", np.int32 : "I", np.int16 : "I", np.int8 : "I",
+        float : "R", np.float128 : "R", np.float64 : "R", np.float16 : "R",
         str : "S", list : "S", tuple : "S", np.ndarray : "S"
     }
 
