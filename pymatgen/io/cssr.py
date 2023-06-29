@@ -1,6 +1,4 @@
-"""
-This module provides input and output from the CSSR file format.
-"""
+"""This module provides input and output from the CSSR file format."""
 
 from __future__ import annotations
 
@@ -25,7 +23,7 @@ class Cssr:
     a Structure to a Cssr file is supported.
     """
 
-    def __init__(self, structure):
+    def __init__(self, structure: Structure):
         """
         Args:
             structure (Structure/IStructure): A structure to create the Cssr object.

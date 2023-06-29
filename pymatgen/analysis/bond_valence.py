@@ -1,6 +1,4 @@
-"""
-This module implements classes to perform bond valence analyses.
-"""
+"""This module implements classes to perform bond valence analyses."""
 
 from __future__ import annotations
 
@@ -9,6 +7,7 @@ import functools
 import operator
 import os
 from math import exp, sqrt
+from typing import TYPE_CHECKING
 
 import numpy as np
 from monty.serialization import loadfn
@@ -16,7 +15,8 @@ from monty.serialization import loadfn
 from pymatgen.core.periodic_table import Element, Species, get_el_sp
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-# Let's initialize some module level properties.
+if TYPE_CHECKING:
+    from pymatgen.core import Structure
 
 # List of electronegative elements specified in M. O'Keefe, & N. Brese,
 # JACS, 1991, 113(9), 3226-3229. doi:10.1021/ja00009a002.
@@ -48,7 +48,7 @@ def calculate_bv_sum(site, nn_list, scale_factor=1.0):
             which may tend to under (GGA) or over bind (LDA).
     """
     el1 = Element(site.specie.symbol)
-    bvsum = 0
+    bv_sum = 0
     for nn in nn_list:
         el2 = Element(nn.specie.symbol)
         if (el1 in ELECTRONEG or el2 in ELECTRONEG) and el1 != el2:
@@ -58,8 +58,8 @@ def calculate_bv_sum(site, nn_list, scale_factor=1.0):
             c2 = BV_PARAMS[el2]["c"]
             R = r1 + r2 - r1 * r2 * (sqrt(c1) - sqrt(c2)) ** 2 / (c1 * r1 + c2 * r2)
             vij = exp((R - nn.nn_distance * scale_factor) / 0.31)
-            bvsum += vij * (1 if el1.X < el2.X else -1)
-    return bvsum
+            bv_sum += vij * (1 if el1.X < el2.X else -1)
+    return bv_sum
 
 
 def calculate_bv_sum_unordered(site, nn_list, scale_factor=1):
@@ -205,7 +205,7 @@ class BVAnalyzer:
                 prob[el] = {key: 0 for key in prob[el]}
         return prob
 
-    def get_valences(self, structure):
+    def get_valences(self, structure: Structure):
         """
         Returns a list of valences for each site in the structure.
 
@@ -281,8 +281,8 @@ class BVAnalyzer:
 
             def evaluate_assignment(v_set):
                 el_oxi = collections.defaultdict(list)
-                for i, sites in enumerate(equi_sites):
-                    el_oxi[sites[0].specie.symbol].append(v_set[i])
+                for idx, sites in enumerate(equi_sites):
+                    el_oxi[sites[0].specie.symbol].append(v_set[idx])
                 max_diff = max(max(v) - min(v) for v in el_oxi.values())
                 if max_diff > 1:
                     return
@@ -338,7 +338,7 @@ class BVAnalyzer:
                 for sp, occu in get_z_ordered_elmap(sites[0].species):
                     elements.append(sp.symbol)
                     fractions.append(occu)
-            fractions = np.array(fractions, np.float_)
+            fractions = np.array(fractions, np.float_)  # type: ignore[assignment]
             new_valences = []
             for vals in valences:
                 for val in vals:
@@ -428,7 +428,7 @@ class BVAnalyzer:
             return [[int(frac_site) for frac_site in assigned[site]] for site in structure]
         raise ValueError("Valences cannot be assigned!")
 
-    def get_oxi_state_decorated_structure(self, structure):
+    def get_oxi_state_decorated_structure(self, structure: Structure):
         """
         Get an oxidation state decorated structure. This currently works only
         for ordered structures only.

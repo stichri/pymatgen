@@ -30,6 +30,7 @@ from pymatgen.entries.computed_entries import (
     TemperatureEnergyAdjustment,
 )
 from pymatgen.io.vasp.sets import MITRelaxSet, MPRelaxSet
+from pymatgen.util.due import Doi, due
 
 __author__ = "Amanda Wang, Ryan Kingsbury, Shyue Ping Ong, Anubhav Jain, Stephen Dacek, Sai Jayaraman"
 __copyright__ = "Copyright 2012-2020, The Materials Project"
@@ -47,7 +48,7 @@ AnyComputedEntry = Union[ComputedEntry, ComputedStructureEntry]
 class CompatibilityError(Exception):
     """
     Exception class for Compatibility. Raised by attempting correction
-    on incompatible calculation
+    on incompatible calculation.
     """
 
 
@@ -121,7 +122,7 @@ class PotcarCorrection(Correction):
         """
         Args:
             input_set: InputSet object used to generate the runs (used to check
-                for correct potcar symbols)
+                for correct potcar symbols).
 
             check_hash (bool): If true, uses the potcar hash to check for valid
                 potcars. If false, uses the potcar symbol (Less reliable).
@@ -413,20 +414,9 @@ class UCorrection(Correction):
     these fields populated.
     """
 
-    common_peroxides = [
-        "Li2O2",
-        "Na2O2",
-        "K2O2",
-        "Cs2O2",
-        "Rb2O2",
-        "BeO2",
-        "MgO2",
-        "CaO2",
-        "SrO2",
-        "BaO2",
-    ]
-    common_superoxides = ["LiO2", "NaO2", "KO2", "RbO2", "CsO2"]
-    ozonides = ["LiO3", "NaO3", "KO3", "NaO5"]
+    common_peroxides = ("Li2O2", "Na2O2", "K2O2", "Cs2O2", "Rb2O2", "BeO2", "MgO2", "CaO2", "SrO2", "BaO2")
+    common_superoxides = ("LiO2", "NaO2", "KO2", "RbO2", "CsO2")
+    ozonides = ("LiO3", "NaO3", "KO3", "NaO5")
 
     def __init__(self, config_file, input_set, compat_type, error_file=None):
         """
@@ -443,7 +433,7 @@ class UCorrection(Correction):
             error_file: Path to the selected compatibilityErrors.yaml config file.
         """
         if compat_type not in ["GGA", "Advanced"]:
-            raise CompatibilityError(f"Invalid compat_type {compat_type}")
+            raise CompatibilityError(f"Invalid {compat_type=}")
 
         c = loadfn(config_file)
 
@@ -891,7 +881,7 @@ class MaterialsProject2020Compatibility(Compatibility):
                 Phys. Rev. B - Condens. Matter Mater. Phys. 84, 1-10 (2011).
         """
         if compat_type not in ["GGA", "Advanced"]:
-            raise CompatibilityError(f"Invalid compat_type {compat_type}")
+            raise CompatibilityError(f"Invalid {compat_type=}")
 
         self.compat_type = compat_type
         self.correct_peroxide = correct_peroxide
@@ -1186,6 +1176,7 @@ class MITAqueousCompatibility(CorrectionsList):
 
 
 @cached_class
+@due.dcite(Doi("10.1103/PhysRevB.85.235438", "Pourbaix scheme to combine calculated and experimental data"))
 class MaterialsProjectAqueousCompatibility(Compatibility):
     """
     This class implements the Aqueous energy referencing scheme for constructing
@@ -1360,8 +1351,8 @@ class MaterialsProjectAqueousCompatibility(Compatibility):
         # TODO - detection of embedded water molecules is not very sophisticated
         # Should be replaced with some kind of actual structure detection
 
-        # For any compound except water, check to see if it is a hydrate (contains)
-        # H2O in its structure. If so, adjust the energy to remove MU_H2O ev per
+        # For any compound except water, check to see if it is a hydrate (contains
+        # H2O in its structure). If so, adjust the energy to remove MU_H2O eV per
         # embedded water molecule.
         # in other words, we assume that the DFT energy of such a compound is really
         # a superposition of the "real" solid DFT energy (FeO in this case) and the free
@@ -1372,11 +1363,14 @@ class MaterialsProjectAqueousCompatibility(Compatibility):
         # with
         # g_FeO = E_FeO.nH2O + dE_Fe + dE_O + n g_H2O
         # where E is DFT energy, dE is an energy correction, and g is Gibbs free energy
-        # This means we have to 1) remove energy corrections associated with H and O in water
-        # and then 2) remove the free energy of the water molecules
+        # of formation
+        # This means we have to 1) reverse any energy corrections that have already been
+        # applied to H and O in water and then 2) remove the free energy of the water
+        # molecules from the hydrated solid energy.
         if rform != "H2O":
             # count the number of whole water molecules in the composition
-            nH2O = int(min(comp["H"] / 2.0, comp["O"]))
+            rcomp, factor = comp.get_reduced_composition_and_factor()
+            nH2O = int(min(rcomp["H"] / 2.0, rcomp["O"])) * factor
             if nH2O > 0:
                 # first, remove any H or O corrections already applied to H2O in the
                 # formation energy so that we don't double count them
