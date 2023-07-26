@@ -63,7 +63,7 @@ class CohpTest(unittest.TestCase):
         icoop_ef = self.coop.get_interpolated_value(self.coop.efermi, integrated=True)
         assert icohp_ef_dict == approx(icohp_ef)
         assert icoop_ef_dict == approx(icoop_ef)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="ICOHP is empty"):
             self.cohp_only.get_interpolated_value(5.0, integrated=True)
 
     def test_str(self):
@@ -130,13 +130,13 @@ class IcohpValueTest(unittest.TestCase):
         # without spin polarization
         assert self.icohpvalue_sp.num_bonds == 1
         assert self.icohpvalue_sp.are_coops is False
-        assert self.icohpvalue_sp.is_spin_polarized is True
+        assert self.icohpvalue_sp.is_spin_polarized
         assert self.icohpvalue.icohp == {Spin.up: -2.0}
 
         # with spin polarization
         assert self.icohpvalue_sp.num_bonds == 1
         assert self.icohpvalue_sp.are_coops is False
-        assert self.icohpvalue_sp.is_spin_polarized is True
+        assert self.icohpvalue_sp.is_spin_polarized
         assert self.icohpvalue_sp.icohp == {Spin.up: -1.1, Spin.down: -1.0}
 
     def test_icohpvalue(self):
@@ -881,10 +881,18 @@ class CompleteCohpTest(PymatgenTest):
         # The json files are dict representations of the COHPs from the LMTO
         # and LOBSTER calculations and should thus be the same.
 
-        assert self.cohp_lobster.as_dict() == self.cohp_lobster_dict.as_dict()
-        assert self.cohp_orb.as_dict() == self.cohp_orb_dict.as_dict()
+        def is_equal(a, b):
+            a_dict = a.as_dict()
+            b_dict = b.as_dict()
+            del a_dict["structure"]
+            del b_dict["structure"]
+            return (a_dict == b_dict) and (a.structure == b.structure)
+
+        assert is_equal(self.cohp_lobster, self.cohp_lobster_dict)
+        assert is_equal(self.cohp_orb, self.cohp_orb_dict)
         # Lobster 3.0, including f orbitals
-        assert self.cohp_lobster_forb.as_dict() == self.cohp_lobster_forb_dict.as_dict()
+
+        assert is_equal(self.cohp_lobster_forb, self.cohp_lobster_forb_dict)
 
         # Testing the LMTO dicts will be more involved. Since the average
         # is calculated and not read, there may be differences in rounding
@@ -1057,9 +1065,10 @@ class CompleteCohpTest(PymatgenTest):
         assert_array_equal(cohp_label2.icohp[Spin.up], ref["ICOHP"][Spin.up] * 2.0)
         assert_array_equal(cohp_label2x.icohp[Spin.up], ref["ICOHP"][Spin.up])
         assert_array_equal(cohp_label3.icohp[Spin.up], ref["ICOHP"][Spin.up] + ref2["ICOHP"][Spin.up])
-        with pytest.raises(ValueError):
+        expected_msg = "label_list and orbital_list don't have the same length"
+        with pytest.raises(ValueError, match=expected_msg):
             self.cohp_orb.get_summed_cohp_by_label_and_orbital_list(["1"], ["4px-4pz", "4s-4px"])
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_msg):
             self.cohp_orb.get_summed_cohp_by_label_and_orbital_list(["1", "2"], ["4s-4px"])
 
     def test_get_summed_cohp_by_label_and_orbital_list_summed_spin_channels(self):
@@ -1085,11 +1094,12 @@ class CompleteCohpTest(PymatgenTest):
         assert_array_equal(cohp_label2.icohp[Spin.up], ref["ICOHP"][Spin.up] * 2.0)
         assert_array_equal(cohp_label2x.icohp[Spin.up], ref["ICOHP"][Spin.up])
         assert_array_equal(cohp_label3.icohp[Spin.up], ref["ICOHP"][Spin.up] + ref2["ICOHP"][Spin.up])
-        with pytest.raises(ValueError):
+        expected_msg = "label_list and orbital_list don't have the same length"
+        with pytest.raises(ValueError, match=expected_msg):
             self.cohp_orb.get_summed_cohp_by_label_and_orbital_list(
                 ["1"], ["4px-4pz", "4s-4px"], summed_spin_channels=True
             )
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_msg):
             self.cohp_orb.get_summed_cohp_by_label_and_orbital_list(["1", "2"], ["4s-4px"], summed_spin_channels=True)
 
         # files with spin polarization

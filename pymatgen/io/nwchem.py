@@ -26,7 +26,6 @@ import warnings
 from string import Template
 
 import numpy as np
-from frozendict import frozendict
 from monty.io import zopen
 from monty.json import MSONable
 
@@ -42,45 +41,41 @@ if os.getenv("NWCHEM_BASIS_LIBRARY"):
 class NwTask(MSONable):
     """Base task for Nwchem."""
 
-    theories = frozendict(
-        {
-            "g3gn": "some description",
-            "scf": "Hartree-Fock",
-            "dft": "DFT",
-            "esp": "ESP",
-            "sodft": "Spin-Orbit DFT",
-            "mp2": "MP2 using a semi-direct algorithm",
-            "direct_mp2": "MP2 using a full-direct algorithm",
-            "rimp2": "MP2 using the RI approximation",
-            "ccsd": "Coupled-cluster single and double excitations",
-            "ccsd(t)": "Coupled-cluster linearized triples approximation",
-            "ccsd+t(ccsd)": "Fourth order triples contribution",
-            "mcscf": "Multiconfiguration SCF",
-            "selci": "Selected CI with perturbation correction",
-            "md": "Classical molecular dynamics simulation",
-            "pspw": "Pseudopotential plane-wave DFT for molecules and insulating solids using NWPW",
-            "band": "Pseudopotential plane-wave DFT for solids using NWPW",
-            "tce": "Tensor Contraction Engine",
-            "tddft": "Time Dependent DFT",
-        }
-    )
+    theories = {
+        "g3gn": "some description",
+        "scf": "Hartree-Fock",
+        "dft": "DFT",
+        "esp": "ESP",
+        "sodft": "Spin-Orbit DFT",
+        "mp2": "MP2 using a semi-direct algorithm",
+        "direct_mp2": "MP2 using a full-direct algorithm",
+        "rimp2": "MP2 using the RI approximation",
+        "ccsd": "Coupled-cluster single and double excitations",
+        "ccsd(t)": "Coupled-cluster linearized triples approximation",
+        "ccsd+t(ccsd)": "Fourth order triples contribution",
+        "mcscf": "Multiconfiguration SCF",
+        "selci": "Selected CI with perturbation correction",
+        "md": "Classical molecular dynamics simulation",
+        "pspw": "Pseudopotential plane-wave DFT for molecules and insulating solids using NWPW",
+        "band": "Pseudopotential plane-wave DFT for solids using NWPW",
+        "tce": "Tensor Contraction Engine",
+        "tddft": "Time Dependent DFT",
+    }
 
-    operations = frozendict(
-        {
-            "energy": "Evaluate the single point energy.",
-            "gradient": "Evaluate the derivative of the energy with respect to nuclear coordinates.",
-            "optimize": "Minimize the energy by varying the molecular structure.",
-            "saddle": "Conduct a search for a transition state (or saddle point).",
-            "hessian": "Compute second derivatives.",
-            "frequencies": "Compute second derivatives and print out an analysis of molecular vibrations.",
-            "freq": "Same as frequencies.",
-            "vscf": "Compute anharmonic contributions to the vibrational modes.",
-            "property": "Calculate the properties for the wave function.",
-            "dynamics": "Perform classical molecular dynamics.",
-            "thermodynamics": "Perform multi-configuration thermodynamic integration using classical MD.",
-            "": "dummy",
-        }
-    )
+    operations = {
+        "energy": "Evaluate the single point energy.",
+        "gradient": "Evaluate the derivative of the energy with respect to nuclear coordinates.",
+        "optimize": "Minimize the energy by varying the molecular structure.",
+        "saddle": "Conduct a search for a transition state (or saddle point).",
+        "hessian": "Compute second derivatives.",
+        "frequencies": "Compute second derivatives and print out an analysis of molecular vibrations.",
+        "freq": "Same as frequencies.",
+        "vscf": "Compute anharmonic contributions to the vibrational modes.",
+        "property": "Calculate the properties for the wave function.",
+        "dynamics": "Perform classical molecular dynamics.",
+        "thermodynamics": "Perform multi-configuration thermodynamic integration using classical MD.",
+        "": "dummy",
+    }
 
     def __init__(
         self,
@@ -424,8 +419,12 @@ class NwInput(MSONable):
             memory_options=d["memory_options"],
         )
 
+    @np.deprecate(message="Use from_str instead")
+    def from_string(cls, *args, **kwargs):
+        return cls.from_str(*args, **kwargs)
+
     @classmethod
-    def from_string(cls, string_input):
+    def from_str(cls, string_input):
         """
         Read an NwInput from a string. Currently tested to work with
         files generated from this class itself.
@@ -531,7 +530,7 @@ class NwInput(MSONable):
             NwInput object
         """
         with zopen(filename) as f:
-            return cls.from_string(f.read())
+            return cls.from_str(f.read())
 
 
 class NwInputError(Exception):

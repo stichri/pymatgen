@@ -31,8 +31,8 @@ for key, val in loadfn(os.path.join(module_dir, "bvparam_1991.yaml")).items():
 
 # Read in yaml containing data-mined ICSD BV data.
 all_data = loadfn(os.path.join(module_dir, "icsd_bv.yaml"))
-ICSD_BV_DATA = {Species.from_string(sp): data for sp, data in all_data["bvsum"].items()}
-PRIOR_PROB = {Species.from_string(sp): data for sp, data in all_data["occurrence"].items()}
+ICSD_BV_DATA = {Species.from_str(sp): data for sp, data in all_data["bvsum"].items()}
+PRIOR_PROB = {Species.from_str(sp): data for sp, data in all_data["occurrence"].items()}
 
 
 def calculate_bv_sum(site, nn_list, scale_factor=1.0):
@@ -272,8 +272,8 @@ class BVAnalyzer:
         # make variables needed for recursion
         if structure.is_ordered:
             n_sites = np.array(list(map(len, equi_sites)))
-            vmin = np.array(list(map(min, valences)))
-            vmax = np.array(list(map(max, valences)))
+            valence_min = np.array(list(map(min, valences)))
+            valence_max = np.array(list(map(max, valences)))
 
             self._n = 0
             self._best_score = 0
@@ -300,12 +300,12 @@ class BVAnalyzer:
                     assigned = []
 
                 i = len(assigned)
-                highest = vmax.copy()
+                highest = valence_max.copy()
                 highest[:i] = assigned
                 highest *= n_sites
                 highest = np.sum(highest)
 
-                lowest = vmin.copy()
+                lowest = valence_min.copy()
                 lowest[:i] = assigned
                 lowest *= n_sites
                 lowest = np.sum(lowest)
@@ -324,13 +324,13 @@ class BVAnalyzer:
                 return
 
         else:
-            n_sites = np.array([len(i) for i in equi_sites])
+            n_sites = np.array([len(sites) for sites in equi_sites])
             tmp = []
             attrib = []
-            for insite, nsite in enumerate(n_sites):
-                for _ in valences[insite]:
-                    tmp.append(nsite)
-                    attrib.append(insite)
+            for idx, n_site in enumerate(n_sites):
+                for _ in valences[idx]:
+                    tmp.append(n_site)
+                    attrib.append(idx)
             new_nsites = np.array(tmp)
             fractions = []
             elements = []
@@ -339,12 +339,9 @@ class BVAnalyzer:
                     elements.append(sp.symbol)
                     fractions.append(occu)
             fractions = np.array(fractions, np.float_)  # type: ignore[assignment]
-            new_valences = []
-            for vals in valences:
-                for val in vals:
-                    new_valences.append(val)
-            vmin = np.array([min(i) for i in new_valences], np.float_)
-            vmax = np.array([max(i) for i in new_valences], np.float_)
+            new_valences = [val for vals in valences for val in vals]
+            valence_min = np.array([min(i) for i in new_valences], np.float_)
+            valence_max = np.array([max(i) for i in new_valences], np.float_)
 
             self._n = 0
             self._best_score = 0
@@ -378,13 +375,13 @@ class BVAnalyzer:
                     assigned = []
 
                 i = len(assigned)
-                highest = vmax.copy()
+                highest = valence_max.copy()
                 highest[:i] = assigned
                 highest *= new_nsites
                 highest *= fractions
                 highest = np.sum(highest)
 
-                lowest = vmin.copy()
+                lowest = valence_min.copy()
                 lowest[:i] = assigned
                 lowest *= new_nsites
                 lowest *= fractions

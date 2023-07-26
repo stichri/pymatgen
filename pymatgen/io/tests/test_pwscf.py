@@ -13,7 +13,7 @@ from pymatgen.util.testing import PymatgenTest
 class PWInputTest(PymatgenTest):
     def test_init(self):
         struct = self.get_structure("Li2O")
-        with pytest.raises(PWInputError):
+        with pytest.raises(PWInputError, match="Missing O2- in pseudo specification"):
             PWInput(
                 struct,
                 control={"calculation": "scf", "pseudo_dir": "./"},
@@ -353,7 +353,7 @@ CELL_PARAMETERS angstrom
             ]
         )
 
-        pwin = PWInput.from_string(string)
+        pwin = PWInput.from_str(string)
 
         # generate list of coords
         pw_sites = []

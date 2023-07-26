@@ -38,6 +38,7 @@ from pymatgen.electronic_structure.core import Magmom, Orbital, OrbitalType, Spi
 from pymatgen.electronic_structure.dos import CompleteDos, Dos
 from pymatgen.entries.computed_entries import ComputedEntry, ComputedStructureEntry
 from pymatgen.io.common import VolumetricData as BaseVolumetricData
+from pymatgen.io.core import ParseError
 from pymatgen.io.vasp.inputs import Incar, Kpoints, Poscar, Potcar
 from pymatgen.io.wannier90 import Unk
 from pymatgen.util.io_utils import clean_lines, micro_pyawk
@@ -81,6 +82,7 @@ def _parse_v_parameters(val_type, val, filename, param_name):
     Returns:
         Parsed value.
     """
+    err = ValueError("Error in parsing vasprun.xml")
     if val_type == "logical":
         val = [i == "T" for i in val.split()]
     elif val_type == "int":
@@ -91,7 +93,7 @@ def _parse_v_parameters(val_type, val, filename, param_name):
             # LDAUL/J as 2****
             val = _parse_from_incar(filename, param_name)
             if val is None:
-                raise OSError("Error in parsing vasprun.xml")
+                raise err
     elif val_type == "string":
         val = val.split()
     else:
@@ -102,7 +104,7 @@ def _parse_v_parameters(val_type, val, filename, param_name):
             # MAGMOM as 2****
             val = _parse_from_incar(filename, param_name)
             if val is None:
-                raise OSError("Error in parsing vasprun.xml")
+                raise err
     return val
 
 
@@ -693,7 +695,7 @@ class Vasprun(MSONable):
             return {symbols[i]: us[i] - js[i] for i in range(len(symbols))}
         if sum(us) == 0 and sum(js) == 0:
             return {}
-        raise VaspParserError("Length of U value parameters and atomic symbols are mismatched")
+        raise VaspParseError("Length of U value parameters and atomic symbols are mismatched")
 
     @property
     def run_type(self):
@@ -876,7 +878,7 @@ class Vasprun(MSONable):
         if not kpoints_filename:
             kpoints_filename = zpath(os.path.join(os.path.dirname(self.filename), "KPOINTS"))
         if kpoints_filename and not os.path.exists(kpoints_filename) and line_mode is True:
-            raise VaspParserError("KPOINTS not found but needed to obtain band structure along symmetry lines.")
+            raise VaspParseError("KPOINTS not found but needed to obtain band structure along symmetry lines.")
 
         if efermi == "smart":
             e_fermi = self.calculate_efermi()
@@ -1047,7 +1049,7 @@ class Vasprun(MSONable):
             return np.max(all_eigs[all_eigs < fermi]), np.min(all_eigs[all_eigs > fermi])
 
         if not crosses_band(self.efermi):
-            # Fermi doesn't cross a band; safe to use VASP fermi level
+            # Fermi doesn't cross a band; safe to use VASP Fermi level
             return self.efermi
 
         # if the Fermi level crosses a band, check if we are very close to band gap;
@@ -1294,7 +1296,7 @@ class Vasprun(MSONable):
         if elem.find("generation"):
             e = elem.find("generation")
         k = Kpoints("Kpoints from vasprun.xml")
-        k.style = Kpoints.supported_modes.from_string(e.attrib["param"] if "param" in e.attrib else "Reciprocal")
+        k.style = Kpoints.supported_modes.from_str(e.attrib["param"] if "param" in e.attrib else "Reciprocal")
         for v in e.findall("v"):
             name = v.attrib.get("name")
             toks = v.text.split()
@@ -3463,7 +3465,7 @@ class VolumetricData(BaseVolumetricData):
                     if line != "" or len(poscar_string) == 0:
                         poscar_string.append(line)
                     elif line == "":
-                        poscar = Poscar.from_string("\n".join(poscar_string))
+                        poscar = Poscar.from_str("\n".join(poscar_string))
                         poscar_read = True
                 elif not dim:
                     dim = [int(i) for i in line.split()]
@@ -4015,7 +4017,7 @@ class Oszicar:
         }
 
 
-class VaspParserError(Exception):
+class VaspParseError(ParseError):
     """Exception class for VASP parsing."""
 
 
@@ -4117,54 +4119,56 @@ class Xdatcar:
 
         # pylint: disable=E1136
         ionicstep_cnt = 1
-        for line in file:
-            line = line.strip()
-            if self.preamble is None:
-                self.preamble = [line]
-                title = line
-            elif title == line:
-                self.preamble_done = False
-                p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
-                if ionicstep_end is None:
-                    if ionicstep_cnt >= ionicstep_start:
-                        structures.append(p.structure)
-                else:
-                    if ionicstep_start <= ionicstep_cnt < ionicstep_end:
-                        structures.append(p.structure)
-                    if ionicstep_cnt >= ionicstep_end:
-                        break
-                ionicstep_cnt += 1
-                coords_str = []
-                self.preamble = [line]
-            elif not self.preamble_done:
-                if line == "" or "Direct configuration=" in line:
-                    self.preamble_done = True
-                    tmp_preamble = [self.preamble[0]]
-                    for i in range(1, len(self.preamble)):
-                        if self.preamble[0] != self.preamble[i]:
-                            tmp_preamble.append(self.preamble[i])
-                        else:
+        with zopen(filename, "rt") as file:
+            for line in file:
+                line = line.strip()
+                if preamble is None:
+                    preamble = [line]
+                    title = line
+                elif title == line:
+                    preamble_done = False
+                    p = Poscar.from_str("\n".join([*preamble, "Direct", *coords_str]))
+                    if ionicstep_end is None:
+                        if ionicstep_cnt >= ionicstep_start:
+                            structures.append(p.structure)
+                    else:
+                        if ionicstep_start <= ionicstep_cnt < ionicstep_end:
+                            structures.append(p.structure)
+                        if ionicstep_cnt >= ionicstep_end:
+                            break
+                    ionicstep_cnt += 1
+                    coords_str = []
+                    preamble = [line]
+                elif not preamble_done:
+                    if line == "" or "Direct configuration=" in line:
+                        preamble_done = True
+                        tmp_preamble = [preamble[0]]
+                        for i in range(1, len(preamble)):
+                            if preamble[0] != preamble[i]:
+                                tmp_preamble.append(preamble[i])
+                            else:
+                                break
+                        preamble = tmp_preamble
+                    else:
+                        preamble.append(line)
+                elif line == "" or "Direct configuration=" in line:
+                    p = Poscar.from_str("\n".join([*preamble, "Direct", *coords_str]))
+                    if ionicstep_end is None:
+                        if ionicstep_cnt >= ionicstep_start:
+                            structures.append(p.structure)
+                    else:
+                        if ionicstep_start <= ionicstep_cnt < ionicstep_end:
+                            structures.append(p.structure)
+                        if ionicstep_cnt >= ionicstep_end:
                             break
                     self.preamble = tmp_preamble
                 else:
-                    self.preamble.append(line)
-            elif line == "" or "Direct configuration=" in line:
-                p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
-                if ionicstep_end is None:
-                    if ionicstep_cnt >= ionicstep_start:
-                        structures.append(p.structure)
-                else:
-                    if ionicstep_start <= ionicstep_cnt < ionicstep_end:
-                        structures.append(p.structure)
-                    if ionicstep_cnt >= ionicstep_end:
-                        break
-                ionicstep_cnt += 1
-                coords_str = []
-            else:
-                coords_str.append(line)
-        p = Poscar.from_string("\n".join([*self.preamble, "Direct", *coords_str]))
-        if ionicstep_end is None:
-            if ionicstep_cnt >= ionicstep_start:
+                    coords_str.append(line)
+            p = Poscar.from_str("\n".join([*preamble, "Direct", *coords_str]))
+            if ionicstep_end is None:
+                if ionicstep_cnt >= ionicstep_start:
+                    structures.append(p.structure)
+            elif ionicstep_start <= ionicstep_cnt < ionicstep_end:
                 structures.append(p.structure)
         elif ionicstep_start <= ionicstep_cnt < ionicstep_end:
             structures.append(p.structure)
@@ -4234,7 +4238,7 @@ class Xdatcar:
                     else:
                         preamble.append(line)
                 elif line == "" or "Direct configuration=" in line:
-                    p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+                    p = Poscar.from_str("\n".join([*preamble, "Direct", *coords_str]))
                     if ionicstep_end is None:
                         if ionicstep_cnt >= ionicstep_start:
                             structures.append(p.structure)
@@ -4244,7 +4248,7 @@ class Xdatcar:
                     coords_str = []
                 else:
                     coords_str.append(line)
-            p = Poscar.from_string("\n".join([*preamble, "Direct", *coords_str]))
+            p = Poscar.from_str("\n".join([*preamble, "Direct", *coords_str]))
             if ionicstep_end is None:
                 if ionicstep_cnt >= ionicstep_start:
                     structures.append(p.structure)
@@ -4295,12 +4299,12 @@ class Xdatcar:
 
     def write_file(self, filename, **kwargs):
         """
-        Write  Xdatcar class into a file.
+        Write Xdatcar class into a file.
 
         Args:
             filename (str): Filename of output XDATCAR file.
-            The supported kwargs are the same as those for the
-            Xdatcar.get_string method and are passed through directly.
+            **kwargs: Supported kwargs are the same as those for the
+                Xdatcar.get_string method and are passed through directly.
         """
         with zopen(filename, "wt") as f:
             f.write(self.get_string(**kwargs))
@@ -4384,24 +4388,24 @@ class Dynmat:
 
 def get_adjusted_fermi_level(efermi, cbm, band_structure):
     """
-    When running a band structure computations the fermi level needs to be
+    When running a band structure computations the Fermi level needs to be
     take from the static run that gave the charge density used for the non-self
-    consistent band structure run. Sometimes this fermi level is however a
+    consistent band structure run. Sometimes this Fermi level is however a
     little too low because of the mismatch between the uniform grid used in
     the static run and the band structure k-points (e.g., the VBM is on Gamma
     and the Gamma point is not in the uniform mesh). Here we use a procedure
-    consisting in looking for energy levels higher than the static fermi level
+    consisting in looking for energy levels higher than the static Fermi level
     (but lower than the LUMO) if any of these levels make the band structure
     appears insulating and not metallic anymore, we keep this adjusted fermi
     level. This procedure has shown to detect correctly most insulators.
 
     Args:
-        efermi (float): Fermi energy of the static run
-        cbm (float): Conduction band minimum of the static run
-        run_bandstructure: a band_structure object
+        efermi (float): The Fermi energy of the static run.
+        cbm (float): The conduction band minimum of the static run.
+        band_structure (BandStructureSymmLine): A band structure object.
 
     Returns:
-        a new adjusted fermi level
+        float: A new adjusted Fermi level.
     """
     # make a working copy of band_structure
     bs_working = BandStructureSymmLine.from_dict(band_structure.as_dict())

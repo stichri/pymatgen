@@ -16,6 +16,7 @@ import shutil
 import subprocess
 from string import Template
 
+import numpy as np
 from monty.io import zopen
 from monty.json import MSONable
 
@@ -439,9 +440,7 @@ class FiestaInput(MSONable):
             o.append(" Dumping data for TD-DFT treatment")
         o.append("")
         o.append(" Atoms in cell cartesian A:")
-        symbols = []
-        for syb in self._mol.symbol_set:
-            symbols.append(syb)
+        symbols = list(self._mol.symbol_set)
 
         for site in self._mol:
             o.append(f" {site.x} {site.y} {site.z} {int(symbols.index(site.specie.symbol)) + 1}")
@@ -456,9 +455,7 @@ class FiestaInput(MSONable):
         return self._mol
 
     def __str__(self):
-        symbols = []
-        for syb in self._mol.symbol_set:
-            symbols.append(syb)
+        symbols = list(self._mol.symbol_set)
 
         geometry = []
         for site in self._mol:
@@ -557,8 +554,12 @@ $geometry
             BSE_TDDFT_options=d["memory_options"],
         )
 
+    @np.deprecate(message="Use from_str instead")
+    def from_string(cls, *args, **kwargs):
+        return cls.from_str(*args, **kwargs)
+
     @classmethod
-    def from_string(cls, string_input):
+    def from_str(cls, string_input):
         """
         Read an FiestaInput from a string. Currently tested to work with
         files generated from this class itself.
@@ -705,7 +706,7 @@ $geometry
             FiestaInput object
         """
         with zopen(filename) as f:
-            return cls.from_string(f.read())
+            return cls.from_str(f.read())
 
 
 class FiestaOutput:

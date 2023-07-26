@@ -1,12 +1,16 @@
 Change log
 ==========
 
-v2023.6.28
+v2023.7.17
 ----------
-* Use lru_cache to speed up get_el_sp by 400x (@v1kko).
-* Related to lru_cache of get_el_sp, Species.properties is now deprecated in favor of setting Species(spin=5). The rationale is
-  that spin is the only supported property for Species anyway. Species and DummySpecies is now mostly immutable, i.e., setting specie.spin = 5 have no effect. This is as intended since the first version of pymatgen.
-* PR #3111 from @xjf729 fix-MoleculeGraph-draw_graph
-* PR #3030 from @lbluque Remove superfluous structure argument docstring from `SQSTransformation` init
-* PR #3031 from @kavanase Quick fix to allow direct initialisation of the `DictSet` class.
-* PR #3015 from @lbluque Optimized cython code in `find_points_in_spheres`, getting ~5x faster runtime.
+- Cython 3.0 support.
+- PR #3157 from @mattmcdermott magnetic-analyzer-fix. Fixes bug briefly mentioned in #3070, where recent
+  spin property changes resulted in the `MagneticStructureEnumerator` failing. This is apparently due to
+  creating structures where only some `Species.spin` properties are defined, causing
+  CollinearMagneticStructureEnumerator` to fail.
+- PR #3070 from @mattmcdermott magnetic-enumerator-fix. To summarize: changes to default magnetic moments
+  introduced in #2727 now mean that structures with only partially defined magnetic moments (e.g., on
+  half the sites) cannot be successfully analyzed by `SpaceGroupAnalyzer`. This was encountered when
+  performing magnetic ordering enumeration, as the previous default behavior for `
+  MagOrderingTransformation` does not implicitly yield spins of 0 on the nonmagnetic sites. This has now
+  been fixed.

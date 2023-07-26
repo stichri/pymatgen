@@ -790,12 +790,12 @@ class BandStructureSymmLine(BandStructure, MSONable):
 
         if len(one_group) != 0:
             branches_tmp.append(one_group)
-        for b in branches_tmp:
+        for branch in branches_tmp:
             self.branches.append(
                 {
-                    "start_index": b[0],
-                    "end_index": b[-1],
-                    "name": str(self.kpoints[b[0]].label) + "-" + str(self.kpoints[b[-1]].label),
+                    "start_index": branch[0],
+                    "end_index": branch[-1],
+                    "name": f"{self.kpoints[branch[0]].label}-{self.kpoints[branch[-1]].label}",
                 }
             )
 
@@ -871,7 +871,7 @@ class BandStructureSymmLine(BandStructure, MSONable):
             BandStructureSymmLine: with the applied scissor shift
         """
         if self.is_metal():
-            # moves then the highest index band crossing the fermi level find this band...
+            # moves then the highest index band crossing the Fermi level find this band...
             max_index = -1000
             # spin_index = None
             for idx in range(self.nb_bands):

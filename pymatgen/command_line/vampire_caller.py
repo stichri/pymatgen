@@ -6,7 +6,7 @@ This module depends on a compiled vampire executable available in the path.
 Please download at https://vampire.york.ac.uk/download/ and
 follow the instructions to compile the executable.
 
-If you use this module, please cite the following:
+If you use this module, please cite:
 
 "Atomistic spin model simulations of magnetic nanomaterials."
 R. F. L. Evans, W. J. Fan, P. Chureemart, T. A. Ostler, M. O. A. Ellis
@@ -370,18 +370,18 @@ class VampireCaller:
             f.write(ucf)
 
     @staticmethod
-    def parse_stdout(vamp_stdout, nmats):
+    def parse_stdout(vamp_stdout, n_mats: int) -> tuple:
         """Parse stdout from Vampire.
 
         Args:
             vamp_stdout (txt file): Vampire 'output' file.
-            nmats (int): Num of materials in Vampire sim.
+            n_mats (int): Number of materials in Vampire simulation.
 
         Returns:
             parsed_out (DataFrame): MSONable vampire output.
             critical_temp (float): Calculated critical temp.
         """
-        names = ["T", "m_total"] + ["m_" + str(i) for i in range(1, nmats + 1)] + ["X_x", "X_y", "X_z", "X_m", "nan"]
+        names = ["T", "m_total", *[f"m_{idx + 1}" for idx in range(n_mats)], "X_x", "X_y", "X_z", "X_m", "nan"]
 
         # Parsing vampire MC output
         df = pd.read_csv(vamp_stdout, sep="\t", skiprows=9, header=None, names=names)

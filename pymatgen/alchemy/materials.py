@@ -58,8 +58,8 @@ class TransformedStructure(MSONable):
         self._undone: list[tuple[AbstractTransformation | dict[str, Any], Structure]] = []
 
         transformations = transformations or []
-        for t in transformations:
-            self.append_transformation(t)
+        for trafo in transformations:
+            self.append_transformation(trafo)
 
     def undo_last_change(self) -> None:
         """
@@ -286,11 +286,11 @@ class TransformedStructure(MSONable):
         Returns:
             TransformedStructure
         """
-        parser = CifParser.from_string(cif_string, occupancy_tolerance=occupancy_tolerance)
+        parser = CifParser.from_str(cif_string, occupancy_tolerance=occupancy_tolerance)
         raw_string = re.sub(r"'", '"', cif_string)
         cif_dict = parser.as_dict()
         cif_keys = list(cif_dict)
-        s = parser.get_structures(primitive)[0]
+        struct = parser.get_structures(primitive)[0]
         partial_cif = cif_dict[cif_keys[0]]
         if "_database_code_ICSD" in partial_cif:
             source = partial_cif["_database_code_ICSD"] + "-ICSD"
@@ -302,7 +302,7 @@ class TransformedStructure(MSONable):
             "original_file": raw_string,
             "cif_data": cif_dict[cif_keys[0]],
         }
-        return TransformedStructure(s, transformations, history=[source_info])
+        return TransformedStructure(struct, transformations, history=[source_info])
 
     @staticmethod
     def from_poscar_string(
@@ -316,7 +316,7 @@ class TransformedStructure(MSONable):
             transformations (list[Transformation]): Sequence of transformations
                 to be applied to the input structure.
         """
-        p = Poscar.from_string(poscar_string)
+        p = Poscar.from_str(poscar_string)
         if not p.true_names:
             raise ValueError(
                 "Transformation can be created only from POSCAR strings with proper VASP5 element symbols."

@@ -90,7 +90,7 @@ class AseAtomsAdaptorTest(unittest.TestCase):
         assert atoms.get_initial_charges().tolist(), initial_charges
         assert atoms.get_charges().tolist(), charges
 
-    def test_get_atoms_from_structure_oxistates(self):
+    def test_get_atoms_from_structure_oxi_states(self):
         p = Poscar.from_file(os.path.join(PymatgenTest.TEST_FILES_DIR, "POSCAR"))
         structure = p.structure
         oxi_states = [1.0] * len(structure)
@@ -164,7 +164,7 @@ class AseAtomsAdaptorTest(unittest.TestCase):
         atoms = read(os.path.join(PymatgenTest.TEST_FILES_DIR, "POSCAR_overlap"))
         struct = aio.AseAtomsAdaptor.get_structure(atoms)
         assert [s.species_string for s in struct] == atoms.get_chemical_symbols()
-        with pytest.raises(StructureError):
+        with pytest.raises(StructureError, match="Structure contains sites that are less than 0.01 Angstrom apart"):
             struct = aio.AseAtomsAdaptor.get_structure(atoms, validate_proximity=True)
 
     def test_get_structure_mag(self):

@@ -220,7 +220,7 @@ $end"""
         assert scan_test == scan_actual
 
         bad_scan = {"stre": ["1 2 1.0 2.0 0.05", "3 4 1.5 2.0 0.05"], "bend": ["7 8 9 90 120 10"]}
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Q-Chem only supports PES_SCAN with two or less variables"):
             QCInput.scan_template(bad_scan)
 
     def test_van_der_waals_template(self):
@@ -240,9 +240,9 @@ $end"""
    12 1.72
 $end"""
         assert vdw_test_sequential == vdw_actual_sequential
-
-        with pytest.raises(ValueError):  # bad vdw test
-            QCInput.van_der_waals_template(vdw_params, mode="mymode")
+        mode = "mymode"
+        with pytest.raises(ValueError, match=f"Invalid {mode=}, must be 'atomic' or 'sequential'"):
+            QCInput.van_der_waals_template(vdw_params, mode=mode)
 
     def test_cdft_template(self):
         cdft = [
@@ -552,7 +552,7 @@ tors 6 8 9 10 0.0
 ENDCONSTRAINT
 $end
 """
-        qcinput_test = QCInput.from_string(string)
+        qcinput_test = QCInput.from_str(string)
         species = [
             "S",
             "C",
@@ -954,7 +954,7 @@ $scan
    tors 6 7 8 9 -180 180 30
 $end"""
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="No more than two variables are allows in the scan section"):
             QCInput.read_scan(str_scan_2)
 
     def test_read_negative(self):
@@ -987,7 +987,7 @@ $rem
    geom_opt_max_cycles = 200
 $end
 """
-        qcinp = QCInput.from_string(str_molecule)
+        qcinp = QCInput.from_str(str_molecule)
         assert str_molecule == str(qcinp)
 
     def test_read_plots(self):
@@ -1035,7 +1035,7 @@ $plots
    total_density 0
 $end
 """
-        qcinp = QCInput.from_string(str_molecule)
+        qcinp = QCInput.from_str(str_molecule)
         assert str_molecule == str(qcinp)
 
     def test_read_nbo(self):
@@ -1079,7 +1079,7 @@ $end
 $nbo
 $end
 """
-        qcinp = QCInput.from_string(str_molecule)
+        qcinp = QCInput.from_str(str_molecule)
         assert str_molecule == str(qcinp)
 
         str_molecule = """$molecule
@@ -1123,7 +1123,7 @@ $nbo
    print = 1
 $end
 """
-        qcinp = QCInput.from_string(str_molecule)
+        qcinp = QCInput.from_str(str_molecule)
         assert str_molecule == str(qcinp)
 
     def test_read_cdft(self):

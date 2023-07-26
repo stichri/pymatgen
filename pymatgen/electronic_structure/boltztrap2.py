@@ -417,8 +417,8 @@ class BztInterpolator:
                 default 10 gives 10 time more points in the real space than
                 the number of kpoints given in reciprocal space.
             energy_range: usually the interpolation is not needed on the entire energy
-                range but on a specific range around the fermi level.
-                This energy in eV fix the range around the fermi level
+                range but on a specific range around the Fermi level.
+                This energy in eV fix the range around the Fermi level
                 (E_fermi-energy_range,E_fermi+energy_range) of
                 bands that will be interpolated
                 and taken into account to calculate the transport properties.
@@ -1147,7 +1147,7 @@ class BztPlotter:
                         plt.plot(
                             mu,
                             prop_out[:, i],
-                            label="eig " + str(i) + " " + str(temp) + " K",
+                            label=f"eig {i} {temp} K",
                         )
 
             plt.xlabel(r"$\mu$ (eV)", fontsize=30)
@@ -1165,7 +1165,7 @@ class BztPlotter:
                             doping_all,
                             prop_out[:, i],
                             "s-",
-                            label="eig " + str(i) + " " + str(temp) + " K",
+                            label=f"eig {i} {temp} K",
                         )
             plt.xlabel(r"Carrier conc. $cm^{-3}$", fontsize=30)
             leg_title = dop_type + "-type"
@@ -1187,7 +1187,7 @@ class BztPlotter:
                             temps_all,
                             prop_out[:, i],
                             "s-",
-                            label="eig " + str(i) + " " + str(dop) + " $cm^{-3}$",
+                            label=f"eig {i} {dop} $cm^{{-3}}$",
                         )
 
             plt.xlabel(r"Temperature (K)", fontsize=30)

@@ -14,7 +14,6 @@ from functools import total_ordering
 from itertools import combinations_with_replacement, product
 from typing import Generator, Iterator, Union, cast
 
-from frozendict import frozendict
 from monty.fractions import gcd, gcd_float
 from monty.json import MSONable
 from monty.serialization import loadfn
@@ -73,7 +72,7 @@ class Composition(collections.abc.Hashable, collections.abc.Mapping, MSONable, S
 
     # Special formula handling for peroxides and certain elements. This is so
     # that formula output does not write LiO instead of Li2O2 for example.
-    special_formulas = frozendict(
+    special_formulas = dict(
         LiO="Li2O2",
         NaO="Na2O2",
         KO="K2O2",
@@ -922,7 +921,7 @@ class Composition(collections.abc.Hashable, collections.abc.Mapping, MSONable, S
         if not Composition.oxi_prob:
             module_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
             all_data = loadfn(os.path.join(module_dir, "..", "analysis", "icsd_bv.yaml"))
-            Composition.oxi_prob = {Species.from_string(sp): data for sp, data in all_data["occurrence"].items()}
+            Composition.oxi_prob = {Species.from_str(sp): data for sp, data in all_data["occurrence"].items()}
         oxi_states_override = oxi_states_override or {}
         # assert: Composition only has integer amounts
         if not all(amt == int(amt) for amt in comp.values()):

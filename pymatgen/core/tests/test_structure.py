@@ -19,7 +19,15 @@ from pymatgen.core.composition import Composition
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.operations import SymmOp
 from pymatgen.core.periodic_table import Element, Species
-from pymatgen.core.structure import IMolecule, IStructure, Molecule, PeriodicNeighbor, Structure, StructureError
+from pymatgen.core.structure import (
+    IMolecule,
+    IStructure,
+    Molecule,
+    Neighbor,
+    PeriodicNeighbor,
+    Structure,
+    StructureError,
+)
 from pymatgen.electronic_structure.core import Magmom
 from pymatgen.io.ase import AseAtomsAdaptor
 from pymatgen.util.testing import PymatgenTest
@@ -45,16 +53,21 @@ class NeighborTest(PymatgenTest):
         nn = json.loads(str_, cls=MontyDecoder)
         assert isinstance(nn[0], PeriodicNeighbor)
 
+    def test_neighbor_labels(self):
+        comp = Composition("C")
+        for label in (None, "", "str label", ("tuple", "label")):
+            neighbor = Neighbor(comp, (0, 0, 0), label=label)
+            assert neighbor.label == label if label is not None else str(comp)
+
+            p_neighbor = PeriodicNeighbor(comp, (0, 0, 0), (10, 10, 10), label=label)
+            assert p_neighbor.label == label if label is not None else str(comp)
+
 
 class IStructureTest(PymatgenTest):
     def setUp(self):
         coords = [[0, 0, 0], [0.75, 0.5, 0.75]]
         self.lattice = Lattice(
-            [
-                [3.8401979337, 0.00, 0.00],
-                [1.9200989668, 3.3257101909, 0.00],
-                [0.00, -2.2171384943, 3.1355090603],
-            ]
+            [[3.8401979337, 0, 0], [1.9200989668, 3.3257101909, 0], [0, -2.2171384943, 3.1355090603]]
         )
         self.struct = IStructure(self.lattice, ["Si"] * 2, coords)
         assert len(self.struct) == 2, "Wrong number of sites in structure!"
@@ -66,13 +79,10 @@ class IStructureTest(PymatgenTest):
         with pytest.raises(StructureError, match="Structure contains sites that are less than 0.01 Angstrom apart"):
             IStructure(self.lattice, ["Si"] * 2, coords, validate_proximity=True)
         self.propertied_structure = IStructure(self.lattice, ["Si"] * 2, coords, site_properties={"magmom": [5, -5]})
+        self.labeled_structure = IStructure(self.lattice, ["Si"] * 2, coords, labels=["Si1", "Si2"])
 
         self.lattice_pbc = Lattice(
-            [
-                [3.8401979337, 0.00, 0.00],
-                [1.9200989668, 3.3257101909, 0.00],
-                [0.00, -2.2171384943, 3.1355090603],
-            ],
+            [[3.8401979337, 0, 0], [1.9200989668, 3.3257101909, 0], [0, -2.2171384943, 3.1355090603]],
             pbc=(True, True, False),
         )
 
@@ -167,6 +177,10 @@ class IStructureTest(PymatgenTest):
         struct = IStructure(self.lattice, [{"O": 1.0}, {"Mg": 0.8}], coords)
         assert struct.composition.formula == "Mg0.8 O1"
         assert not struct.is_ordered
+
+    def test_labeled_structure(self):
+        assert self.labeled_structure.labels == ["Si1", "Si2"]
+        assert self.struct.labels == ["Si", "Si"]
 
     def test_get_distance(self):
         assert self.struct.get_distance(0, 1) == approx(2.35, abs=1e-2), "Distance calculated wrongly!"
@@ -313,7 +327,7 @@ class IStructureTest(PymatgenTest):
             assert interpolated_structs[0].lattice == inter_struct.lattice
         assert_array_equal(interpolated_structs[1][1].frac_coords, [0.625, 0.5, 0.625])
 
-        bad_lattice = [[1, 0.00, 0.00], [0, 1, 0.00], [0.00, 0, 1]]
+        bad_lattice = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         struct2 = IStructure(bad_lattice, ["Si"] * 2, coords2)
         with pytest.raises(ValueError, match="Structures with different lattices"):
             struct.interpolate(struct2)
@@ -481,11 +495,11 @@ class IStructureTest(PymatgenTest):
         struct = self.struct
         nn = struct.get_neighbors_in_shell(struct[0].frac_coords, 2, 4, include_index=True, include_image=True)
         assert len(nn) == 47
-        r = random.uniform(3, 6)
-        all_nn = struct.get_all_neighbors(r, True, True)
+        rand_radius = random.uniform(3, 6)
+        all_nn = struct.get_all_neighbors(rand_radius, True, True)
         for idx, site in enumerate(struct):
             assert len(all_nn[idx][0]) == 4
-            assert len(all_nn[idx]) == len(struct.get_neighbors(site, r))
+            assert len(all_nn[idx]) == len(struct.get_neighbors(site, rand_radius))
 
         for site, nns in zip(struct, all_nn):
             for nn in nns:
@@ -525,8 +539,8 @@ Direct
  -0.2705230397846415  1.4621722452479102  0.0625618775773844
 """
         struct = Structure.from_str(poscar, fmt="poscar")
-        site0 = struct.sites[1]
-        site1 = struct.sites[9]
+        site0 = struct[1]
+        site1 = struct[9]
         neigh_sites = struct.get_neighbors(site0, 2.0)
         assert len(neigh_sites) == 1
         neigh_sites = struct.get_neighbors(site1, 2.0)
@@ -759,9 +773,7 @@ class StructureTest(PymatgenTest):
         coords = []
         coords.append([0, 0, 0])
         coords.append([0.75, 0.5, 0.75])
-        lattice = Lattice(
-            [[3.8401979337, 0.00, 0.00], [1.9200989668, 3.3257101909, 0.00], [0.00, -2.2171384943, 3.1355090603]]
-        )
+        lattice = Lattice([[3.8401979337, 0, 0], [1.9200989668, 3.3257101909, 0], [0, -2.2171384943, 3.1355090603]])
         self.structure = Structure(lattice, ["Si", "Si"], coords)
         self.cu_structure = Structure(lattice, ["Cu", "Cu"], coords)
         self.disordered = Structure.from_spacegroup("Im-3m", Lattice.cubic(3), [Composition("Fe0.5Mn0.5")], [[0, 0, 0]])
@@ -901,10 +913,8 @@ class StructureTest(PymatgenTest):
             for specie in site.species:
                 assert specie.oxi_state == oxidation_states[specie.symbol], "Wrong oxidation state assigned!"
         oxidation_states = {"Fe": 2}
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match="Oxidation states not specified for all elements, missing={'Si'}"):
             self.structure.add_oxidation_state_by_element(oxidation_states)
-
-        assert "Oxidation states not specified for all elements, missing={'Si'}" in str(exc.value)
 
     def test_add_oxidation_states_by_site(self):
         self.structure.add_oxidation_state_by_site([2, -4])
@@ -1154,7 +1164,7 @@ class StructureTest(PymatgenTest):
             "P4_2'/mnm'",
             Lattice.tetragonal(4.87, 3.30),
             ["Mn", "F"],
-            [[0, 0, 0], [0.30, 0.30, 0.00]],
+            [[0, 0, 0], [0.30, 0.30, 0]],
             {"magmom": [4, 0]},
         )
 
@@ -1170,7 +1180,7 @@ class StructureTest(PymatgenTest):
             ["La", "Mn", "O", "O"],
             [
                 [0.05, 0.25, 0.99],
-                [0.00, 0.00, 0.50],
+                [0, 0, 0.50],
                 [0.48, 0.25, 0.08],
                 [0.31, 0.04, 0.72],
             ],
@@ -1314,7 +1324,7 @@ class StructureTest(PymatgenTest):
         assert super_cell.charge == 25, "Set charge not properly modifying _charge"
 
     def test_vesta_lattice_matrix(self):
-        silica_zeolite = Molecule.from_file(self.TEST_FILES_DIR / "CON_vesta.xyz")
+        silica_zeolite = Molecule.from_file(f"{self.TEST_FILES_DIR}/CON_vesta.xyz")
 
         s_vesta = Structure(
             lattice=Lattice.from_parameters(22.6840, 13.3730, 12.5530, 90, 69.479, 90, True),

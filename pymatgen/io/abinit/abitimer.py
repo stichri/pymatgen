@@ -13,6 +13,7 @@ import sys
 import numpy as np
 from monty.string import is_string, list_strings
 
+from pymatgen.io.core import ParseError
 from pymatgen.util.num import minloc
 from pymatgen.util.plotting import add_fig_kwargs, get_ax_fig_plt
 
@@ -31,7 +32,7 @@ def alternate(*iterables):
     return items
 
 
-class AbinitTimerParserError(Exception):
+class AbinitTimerParseError(ParseError):
     """Errors raised by AbinitTimerParser."""
 
 
@@ -54,7 +55,7 @@ class AbinitTimerParser(collections.abc.Iterable):
     BEGIN_TAG = "-<BEGIN_TIMER"
     END_TAG = "-<END_TIMER>"
 
-    Error = AbinitTimerParserError
+    Error = AbinitTimerParseError
 
     # DEFAULT_MPI_RANK = "0"
 
@@ -752,7 +753,7 @@ class AbinitTimer:
                 else:
                     other_val += v
 
-            new_names.append("below minval " + str(minval))
+            new_names.append(f"below minval {minval}")
             new_values.append(other_val)
 
         elif minfract is not None:
@@ -767,7 +768,7 @@ class AbinitTimer:
                 else:
                     other_val += v
 
-            new_names.append("below minfract " + str(minfract))
+            new_names.append(f"below minfract {minfract}")
             new_values.append(other_val)
 
         else:
