@@ -163,7 +163,7 @@ class ShiftMode(Enum):
             return obj
         if is_string(obj):
             return cls(obj[0].upper())
-        raise TypeError(f"The object provided is not handled: type {type(obj)}")
+        raise TypeError(f"The object provided is not handled: type {type(obj).__name__}")
 
 
 def _stopping_criterion(runlevel, accuracy):
@@ -248,7 +248,7 @@ def _get_shifts(shift_mode, structure):
             return shifts
         return ((0, 0, 0),)
 
-    raise ValueError(f"invalid shift_mode: `{shift_mode!s}`")
+    raise ValueError(f"invalid {shift_mode=}")
 
 
 def gs_input(
@@ -585,9 +585,7 @@ def num_valence_electrons(structure, pseudos):
 
 
 class AbstractInput(MutableMapping, metaclass=abc.ABCMeta):
-    """
-    Abstract class defining the methods that must be implemented by Input objects.
-    """
+    """Abstract class defining the methods that must be implemented by Input objects."""
 
     # ABC protocol: __delitem__, __getitem__, __iter__, __len__, __setitem__
     def __delitem__(self, key):
@@ -610,12 +608,10 @@ class AbstractInput(MutableMapping, metaclass=abc.ABCMeta):
         return f"<{type(self).__name__} at {id(self)}>"
 
     def __str__(self):
-        return self.to_string()
+        return self.to_str()
 
     def write(self, filepath="run.abi"):
-        """
-        Write the input file to file to ``filepath``.
-        """
+        """Write the input file to file to ``filepath``."""
         dirname = os.path.dirname(os.path.abspath(filepath))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -683,7 +679,7 @@ class AbstractInput(MutableMapping, metaclass=abc.ABCMeta):
         removed = {}
         for key in list_strings(keys):
             if strict and key not in self:
-                raise KeyError(f"key: {key} not in self:\n {list(self)}")
+                raise KeyError(f"{key=} not in self:\n {list(self)}")
             if key in self:
                 removed[key] = self.pop(key)
 
@@ -698,7 +694,7 @@ class AbstractInput(MutableMapping, metaclass=abc.ABCMeta):
         """Check if key is a valid name. Raise self.Error if not valid."""
 
     @abc.abstractmethod
-    def to_string(self):
+    def to_str(self):
         """Returns a string with the input."""
 
 
@@ -707,9 +703,7 @@ class BasicAbinitInputError(Exception):
 
 
 class BasicAbinitInput(AbstractInput, MSONable):
-    """
-    This object stores the ABINIT variables for a single dataset.
-    """
+    """This object stores the ABINIT variables for a single dataset."""
 
     Error = BasicAbinitInputError
 
@@ -733,7 +727,7 @@ class BasicAbinitInput(AbstractInput, MSONable):
             ndtset: Number of datasets.
             comment: Optional string with a comment that will be placed at the beginning of the file.
             abi_args: list of tuples (key, value) with the initial set of variables. Default: Empty
-            abi_kwargs: Dictionary with the initial set of variables. Default: Empty
+            abi_kwargs: Dictionary with the initial set of variables. Default: Empty.
         """
         # Internal dict with variables. we use an ordered dict so that
         # variables will be likely grouped by `topics` when we fill the input.
@@ -766,9 +760,7 @@ class BasicAbinitInput(AbstractInput, MSONable):
             self.set_comment(comment)
 
     def as_dict(self):
-        """
-        JSON interface used in pymatgen for easier serialization.
-        """
+        """JSON interface used in pymatgen for easier serialization."""
         # Use a list of (key, value) to serialize the dict
         abi_args = []
         for key, value in self.items():
@@ -792,9 +784,7 @@ class BasicAbinitInput(AbstractInput, MSONable):
 
     @classmethod
     def from_dict(cls, d):
-        """
-        JSON interface used in pymatgen for easier serialization.
-        """
+        """JSON interface used in pymatgen for easier serialization."""
         pseudos = [Pseudo.from_file(p["filepath"]) for p in d["pseudos"]]
         return cls(d["structure"], pseudos, comment=d["comment"], abi_args=d["abi_args"])
 
@@ -806,7 +796,7 @@ class BasicAbinitInput(AbstractInput, MSONable):
         dct = {}
         for obj in abi_objects:
             if not hasattr(obj, "to_abivars"):
-                raise TypeError(f"type {type(obj)}: {obj!r} does not have `to_abivars` method")
+                raise TypeError(f"type {type(obj).__name__} does not have `to_abivars` method")
             dct.update(self.set_vars(obj.to_abivars()))
         return dct
 
@@ -823,7 +813,11 @@ class BasicAbinitInput(AbstractInput, MSONable):
                 "Use Structure objects to prepare the input file."
             )
 
-    def to_string(self, post=None, with_structure=True, with_pseudos=True, exclude=None):
+    @np.deprecate(message="Use to_str instead")
+    def to_string(cls, *args, **kwargs):
+        return cls.to_str(*args, **kwargs)
+
+    def to_str(self, post=None, with_structure=True, with_pseudos=True, exclude=None):
         """
         String representation.
 
@@ -891,7 +885,7 @@ class BasicAbinitInput(AbstractInput, MSONable):
         """The |Structure| object associated to this input."""
         return self._structure
 
-    def set_structure(self, structure):
+    def set_structure(self, structure: Structure):
         """Set structure."""
         self._structure = as_structure(structure)
 
@@ -1106,13 +1100,13 @@ class BasicMultiDataset:
 
             missing = [p for p in pseudo_paths if not os.path.exists(p)]
             if missing:
-                raise self.Error(f"Cannot find the following pseudopotential files:\n{missing!s}")
+                raise self.Error(f"Cannot find the following pseudopotential files:\n{missing}")
 
             pseudos = PseudoTable(pseudo_paths)
 
         # Build the list of BasicAbinitInput objects.
         if ndtset <= 0:
-            raise ValueError(f"ndtset {ndtset} cannot be <=0")
+            raise ValueError(f"{ndtset=} cannot be <=0")
 
         if not isinstance(structure, (list, tuple)):
             self._inputs = [BasicAbinitInput(structure=structure, pseudos=pseudos) for i in range(ndtset)]
@@ -1176,7 +1170,7 @@ class BasicMultiDataset:
         return on_all
 
     def __add__(self, other):
-        """Self + other"""
+        """Self + other."""
         if isinstance(other, BasicAbinitInput):
             new_mds = BasicMultiDataset.from_inputs(self)
             new_mds.append(other)
@@ -1231,9 +1225,13 @@ class BasicMultiDataset:
         return all(self[0].structure == inp.structure for inp in self)
 
     def __str__(self):
-        return self.to_string()
+        return self.to_str()
 
-    def to_string(self, with_pseudos=True):
+    @np.deprecate(message="Use to_str instead")
+    def to_string(cls, *args, **kwargs):
+        return cls.to_str(*args, **kwargs)
+
+    def to_str(self, with_pseudos=True):
         """
         String representation i.e. the input file read by Abinit.
 
@@ -1252,7 +1250,7 @@ class BasicMultiDataset:
                 return np.array_equal(vref, otherv)
 
             # Don't repeat variable that are common to the different datasets.
-            # Put them in the `Global Variables` section and exclude these variables in inp.to_string
+            # Put them in the `Global Variables` section and exclude these variables in inp.to_str
             global_vars = set()
             for k0, v0 in self[0].items():
                 isame = True
@@ -1275,7 +1273,7 @@ class BasicMultiDataset:
 
             has_same_structures = self.has_same_structures
             if has_same_structures:
-                # Write structure here and disable structure output in input.to_string
+                # Write structure here and disable structure output in input.to_str
                 lines.append(w * "#")
                 lines.append("#" + ("STRUCTURE").center(w - 1))
                 lines.append(w * "#")
@@ -1286,7 +1284,7 @@ class BasicMultiDataset:
             for i, inp in enumerate(self):
                 header = f"### DATASET {i + 1} ###"
                 is_last = i == self.ndtset - 1
-                s = inp.to_string(
+                s = inp.to_str(
                     post=str(i + 1),
                     with_pseudos=is_last and with_pseudos,
                     with_structure=not has_same_structures,
@@ -1304,12 +1302,12 @@ class BasicMultiDataset:
         # and we have variables that end with the dataset index e.g. acell1
         # We don't want to specify ndtset here since abinit will start to add DS# to
         # the input and output files thus complicating the algorithms we have to use to locate the files.
-        return self[0].to_string(with_pseudos=with_pseudos)
+        return self[0].to_str(with_pseudos=with_pseudos)
 
     def write(self, filepath="run.abi"):
         """
         Write ``ndset`` input files to disk. The name of the file
-        is constructed from the dataset index e.g. run0.abi
+        is constructed from the dataset index e.g. run0.abi.
         """
         root, ext = os.path.splitext(filepath)
         for i, inp in enumerate(self):
