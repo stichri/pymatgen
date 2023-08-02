@@ -1,5 +1,3 @@
-# Distributed under the terms of the MIT License
-
 """
 Module for implementing a CTRL file object class for the Stuttgart
 LMTO-ASA code. It will primarily be used to generate a pymatgen
@@ -55,15 +53,11 @@ class LMTOCtrl:
         return self.get_string() == other.get_string()
 
     def __repr__(self):
-        """
-        Representation of the CTRL file is as a string.
-        """
+        """Representation of the CTRL file is as a string."""
         return self.get_string()
 
     def __str__(self):
-        """
-        String representation of the CTRL file.
-        """
+        """String representation of the CTRL file."""
         return self.get_string()
 
     def get_string(self, sigfigs=8):
@@ -170,10 +164,14 @@ class LMTOCtrl:
         """
         with zopen(filename, "rt") as f:
             contents = f.read()
-        return LMTOCtrl.from_string(contents, **kwargs)
+        return LMTOCtrl.from_str(contents, **kwargs)
+
+    @np.deprecate(message="Use from_str instead")
+    def from_string(cls, *args, **kwargs):
+        return cls.from_str(*args, **kwargs)
 
     @classmethod
-    def from_string(cls, data, sigfigs=8):
+    def from_str(cls, data, sigfigs=8):
         """
         Creates a CTRL file object from a string. This will mostly be
         used to read an LMTOCtrl object from a CTRL file. Empty spheres

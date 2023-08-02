@@ -19,10 +19,10 @@ class LammpsDumpTest(unittest.TestCase):
     def setUpClass(cls):
         with open(os.path.join(test_dir, "dump.rdx_wc.100")) as f:
             rdx_str = f.read()
-        cls.rdx = LammpsDump.from_string(string=rdx_str)
+        cls.rdx = LammpsDump.from_str(string=rdx_str)
         with open(os.path.join(test_dir, "dump.tatb")) as f:
             tatb_str = f.read()
-        cls.tatb = LammpsDump.from_string(string=tatb_str)
+        cls.tatb = LammpsDump.from_str(string=tatb_str)
 
     def test_from_string(self):
         assert self.rdx.timestep == 100
@@ -160,7 +160,3 @@ class FuncTest(unittest.TestCase):
         peptide0_select = peptide0.loc[[0, 6], ["Step", "TotEng", "Press"]]
         peptide0_data = [[0, -5237.4580, -837.0112], [300, -5251.3637, -471.5505]]
         assert_array_almost_equal(peptide0_select, peptide0_data)
-
-
-if __name__ == "__main__":
-    unittest.main()
