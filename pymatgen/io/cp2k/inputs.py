@@ -134,7 +134,11 @@ class Keyword(MSONable):
         dct["verbose"] = self.verbose
         return dct
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """String representation of Keyword."""
         return str(self)
 
@@ -150,6 +154,7 @@ class Keyword(MSONable):
             verbose=d["verbose"],
         )
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -203,7 +208,7 @@ class KeywordList(MSONable):
         self.keywords = list(keywords)
 
     def __str__(self):
-        return self.get_string()
+        return self.get_str()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
@@ -227,7 +232,11 @@ class KeywordList(MSONable):
         """Extend the keyword list."""
         self.keywords.extend(lst)
 
-    def get_string(self, indent=0):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self, indent: int = 0) -> str:
         """String representation of Keyword."""
         return " \n".join("\t" * indent + str(k) for k in self.keywords)
 
@@ -305,7 +314,7 @@ class Section(MSONable):
             self.keywords[k] = Keyword(k, v)
 
     def __str__(self):
-        return self.get_string()
+        return self.get_str()
 
     def __eq__(self, d):
         d2 = copy.deepcopy(d)
@@ -551,12 +560,16 @@ class Section(MSONable):
             s = s.get_section(p)
         return s
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Get string representation of Section."""
-        return Section._get_string(self)
+        return Section._get_str(self)
 
     @staticmethod
-    def _get_string(d, indent=0):
+    def _get_str(d, indent=0):
         """
         Helper function to return a pretty string of the section. Includes indentation and
         descriptions (if present).
@@ -575,11 +588,11 @@ class Section(MSONable):
 
         for v in d.keywords.values():
             if isinstance(v, KeywordList):
-                string += v.get_string(indent=indent + 1) + "\n"
+                string += f"{v.get_str(indent=indent + 1)}\n"
             else:
-                string += "\t" * (indent + 1) + v.get_string() + "\n"
+                string += "\t" * (indent + 1) + v.get_str() + "\n"
         for v in d.subsections.values():
-            string += v._get_string(v, indent + 1)
+            string += v._get_str(v, indent + 1)
         string += "\t" * indent + "&END " + d.name + "\n"
 
         return string
@@ -621,7 +634,7 @@ class SectionList(MSONable):
         self.sections = list(sections)
 
     def __str__(self):
-        return self.get_string()
+        return self.get_str()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SectionList):
@@ -642,12 +655,16 @@ class SectionList(MSONable):
         return SectionList(sections=[d.__deepcopy__() for d in self.sections])
 
     @staticmethod
-    def _get_string(d, indent=0):
-        return " \n".join(s._get_string(s, indent) for s in d)
+    def _get_str(d, indent=0):
+        return " \n".join(s._get_str(s, indent) for s in d)
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Return string representation of section list."""
-        return SectionList._get_string(self.sections)
+        return SectionList._get_str(self.sections)
 
     def get(self, d, index=-1):
         """
@@ -673,7 +690,7 @@ class SectionList(MSONable):
 class Cp2kInput(Section):
     """
     Special instance of 'Section' class that is meant to represent the overall cp2k input.
-    Distinguishes itself from Section by overriding get_string() to not print this section's
+    Distinguishes itself from Section by overriding get_str() to not print this section's
     title and by implementing the file i/o.
     """
 
@@ -693,11 +710,11 @@ class Cp2kInput(Section):
             **kwargs,
         )
 
-    def get_string(self):
+    def get_str(self):
         """Get string representation of the Cp2kInput."""
         s = ""
         for v in self.subsections.values():
-            s += v.get_string()
+            s += v.get_str()
         return s
 
     @classmethod
@@ -720,6 +737,7 @@ class Cp2kInput(Section):
             txt = preprocessor(f.read(), os.path.dirname(f.name))
             return Cp2kInput.from_str(txt)
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -806,7 +824,7 @@ class Cp2kInput(Section):
             os.mkdir(output_dir)
         filepath = os.path.join(output_dir, input_filename)
         with open(filepath, "w") as f:
-            f.write(self.get_string())
+            f.write(self.get_str())
 
 
 class Global(Section):
@@ -1067,8 +1085,8 @@ class Mgrid(Section):
 
     def __init__(
         self,
-        cutoff: int | float = 1200,
-        rel_cutoff: int | float = 80,
+        cutoff: float = 1200,
+        rel_cutoff: float = 80,
         ngrids: int = 5,
         progression_factor: int = 3,
         keywords: dict | None = None,
@@ -1709,7 +1727,7 @@ class Smear(Section):
 
     def __init__(
         self,
-        elec_temp: int | float = 300,
+        elec_temp: float = 300,
         method: str = "FERMI_DIRAC",
         fixed_magnetic_moment: float = -1e2,
         keywords: dict | None = None,
@@ -1901,8 +1919,8 @@ class PBE(Section):
     def __init__(
         self,
         parameterization: str = "ORIG",
-        scale_c: float | int = 1,
-        scale_x: float | int = 1,
+        scale_c: float = 1,
+        scale_x: float = 1,
         keywords: dict | None = None,
         subsections: dict | None = None,
     ):
@@ -2247,6 +2265,7 @@ class BasisInfo(MSONable):
         d2 = other.as_dict()
         return all(not (v is not None and v != d2[k]) for k, v in d1.items())
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -2355,10 +2374,14 @@ class AtomicMetadata(MSONable):
         # usedforsecurity=False needed in FIPS mode (Federal Information Processing Standards)
         # https://github.com/materialsproject/pymatgen/issues/2804
         md5 = hashlib.new("md5", usedforsecurity=False)  # hashlib.md5(usedforsecurity=False) is py39+
-        md5.update(self.get_string().lower().encode("utf-8"))
+        md5.update(self.get_str().lower().encode("utf-8"))
         return md5.hexdigest()
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Get string representation."""
         return str(self)
 
@@ -2423,11 +2446,21 @@ class GaussianTypeOrbitalBasisSet(AtomicMetadata):
         return [len(e) for e in self.exponents]
 
     @typing.no_type_check
-    def get_string(self) -> str:
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Get standard cp2k GTO formatted string."""
-        if any(
-            getattr(self, x, None) is None
-            for x in ("info", "nset", "n", "lmax", "lmin", "nshell", "exponents", "coefficients")
+        if (  # written verbosely so mypy can perform type narrowing
+            self.info is None
+            or self.nset is None
+            or self.n is None
+            or self.lmax is None
+            or self.lmin is None
+            or self.nshell is None
+            or self.exponents is None
+            or self.coefficients is None
         ):
             raise ValueError("Must have all attributes defined to get string representation")
 
@@ -2551,6 +2584,7 @@ class PotentialInfo(MSONable):
         d2 = other.as_dict()
         return all(not (v is not None and v != d2[k]) for k, v in d1.items())
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -2640,7 +2674,7 @@ class GthPotential(AtomicMetadata):
         if self.name is None:
             raise ValueError("Cannot get section without name attribute")
 
-        keywords = {"POTENTIAL": Keyword("", self.get_string())}
+        keywords = {"POTENTIAL": Keyword("", self.get_str())}
         return Section(
             name=self.name,
             section_parameters=None,
@@ -2654,23 +2688,26 @@ class GthPotential(AtomicMetadata):
         """Extract GTH-formatted string from a section and convert it to model."""
         sec = copy.deepcopy(section)
         sec.verbosity(False)
-        s = sec.get_string()
-        s = [_ for _ in s.split("\n") if not _.startswith("&")]
-        s = "\n".join(s)
-        return cls.from_str(s)
+        lst = sec.get_str().split("\n")
+        string = "\n".join(line for line in lst if not line.startswith("&"))
+        return cls.from_str(string)
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Convert model to a GTH-formatted string."""
-        if None in (
-            self.info,
-            self.n_elecs,
-            self.r_loc,
-            self.nexp_ppl,
-            self.c_exp_ppl,
-            self.radii,
-            self.nprj,
-            self.nprj_ppnl,
-            self.hprj_ppnl,
+        if (  # written verbosely so mypy can perform type narrowing
+            self.info is None
+            or self.n_elecs is None
+            or self.r_loc is None
+            or self.nexp_ppl is None
+            or self.c_exp_ppl is None
+            or self.radii is None
+            or self.nprj is None
+            or self.nprj_ppnl is None
+            or self.hprj_ppnl is None
         ):
             raise ValueError("Must initialize all attributes in order to get string")
 
@@ -2692,6 +2729,7 @@ class GthPotential(AtomicMetadata):
                 out += "\n"
         return out
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -2781,6 +2819,7 @@ class DataFile(MSONable):
                 obj.filename = fn
             return data
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
@@ -2793,14 +2832,18 @@ class DataFile(MSONable):
     def write_file(self, fn):
         """Write to a file."""
         with open(fn, "w") as f:
-            f.write(self.get_string())
+            f.write(self.get_str())
 
-    def get_string(self):
+    @np.deprecate(message="Use get_str instead")
+    def get_string(self, *args, **kwargs) -> str:
+        return self.get_str(*args, **kwargs)
+
+    def get_str(self) -> str:
         """Get string representation."""
-        return "\n".join(b.get_string() for b in self.objects)
+        return "\n".join(b.get_str() for b in self.objects or [])
 
     def __str__(self):
-        return self.get_string()
+        return self.get_str()
 
 
 @dataclass

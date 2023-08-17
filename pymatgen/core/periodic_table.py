@@ -1213,7 +1213,7 @@ class Species(MSONable, Stringify):
         return output
 
     def to_pretty_string(self) -> str:
-        """:return: String without properties."""
+        """String without properties."""
         output = self.symbol
         if self.oxi_state is not None:
             output += f"{formula_double_format(abs(self.oxi_state))}{'+' if self.oxi_state >= 0 else '-'}"
@@ -1266,7 +1266,7 @@ class Species(MSONable, Stringify):
         radii = self._el.data["Shannon radii"]
         radii = radii[str(int(self._oxi_state))][cn]  # type: ignore
         if len(radii) == 1:
-            key, data = list(radii.items())[0]
+            key, data = next(iter(radii.items()))
             if key != spin:
                 warnings.warn(
                     f"Specified {spin=} not consistent with database spin of {key}. "
@@ -1330,7 +1330,7 @@ class Species(MSONable, Stringify):
         return Species(self.symbol, self.oxi_state, spin=self._spin)
 
     def as_dict(self) -> dict:
-        """:return: Json-able dictionary representation."""
+        """Json-able dictionary representation."""
         d = {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
@@ -1455,7 +1455,7 @@ class DummySpecies(Species):
 
     @property
     def symbol(self) -> str:
-        """:return: Symbol for DummySpecies."""
+        """Symbol for DummySpecies."""
         return self._symbol
 
     def __deepcopy__(self, memo):
@@ -1492,7 +1492,7 @@ class DummySpecies(Species):
         raise ValueError("Invalid DummySpecies String")
 
     def as_dict(self) -> dict:
-        """:return: MSONable dict representation."""
+        """MSONable dict representation."""
         d = {
             "@module": type(self).__module__,
             "@class": type(self).__name__,
@@ -1540,15 +1540,15 @@ class DummySpecie(DummySpecies):
 
 
 @functools.lru_cache
-def get_el_sp(obj) -> Element | Species | DummySpecies:
-    """
-    Utility method to get an Element or Species from an input obj.
+def get_el_sp(obj: int | SpeciesLike) -> Element | Species | DummySpecies:
+    """Utility method to get an Element, Species or DummySpecies from any input.
+
     If obj is in itself an element or a specie, it is returned automatically.
-    If obj is an int or a string representing an integer, the Element
-    with the atomic number obj is returned.
-    If obj is a string, Species parsing will be attempted (e.g., Mn2+), failing
-    which Element parsing will be attempted (e.g., Mn), failing which
-    DummyElement parsing will be attempted.
+    If obj is an int or a string representing an integer, the Element with the
+    atomic number obj is returned.
+    If obj is a string, Species parsing will be attempted (e.g. Mn2+). Failing that
+    Element parsing will be attempted (e.g. Mn). Failing that DummyElement parsing
+    will be attempted.
 
     Args:
         obj (Element/Species/str/int): An arbitrary object. Supported objects
@@ -1560,28 +1560,28 @@ def get_el_sp(obj) -> Element | Species | DummySpecies:
         that can be determined.
 
     Raises:
-        ValueError if obj cannot be converted into an Element or Species.
+        ValueError: if obj cannot be converted into an Element or Species.
     """
     if isinstance(obj, (Element, Species, DummySpecies)):
         return obj
 
     try:
-        c = float(obj)
-        i = int(c)
-        i = i if i == c else None  # type: ignore
+        flt = float(obj)
+        integer = int(flt)
+        integer = integer if integer == flt else None  # type: ignore
+        return Element.from_Z(integer)
     except (ValueError, TypeError):
-        i = None
-
-    if i is not None:
-        return Element.from_Z(i)
+        pass
 
     try:
-        return Species.from_str(obj)
+        return Species.from_str(obj)  # type: ignore
     except (ValueError, KeyError):
-        try:
-            return Element(obj)
-        except (ValueError, KeyError):
-            try:
-                return DummySpecies.from_str(obj)
-            except Exception:
-                raise ValueError(f"Can't parse Element or String from {type(obj).__name__}: {obj}.")
+        pass
+    try:
+        return Element(obj)  # type: ignore
+    except (ValueError, KeyError):
+        pass
+    try:
+        return DummySpecies.from_str(obj)  # type: ignore
+    except Exception:
+        raise ValueError(f"Can't parse Element or Species from {type(obj).__name__}: {obj}.")

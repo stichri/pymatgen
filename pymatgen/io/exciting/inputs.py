@@ -66,13 +66,14 @@ class ExcitingInput(MSONable):
 
     @property
     def lockxyz(self):
-        """:return: Selective dynamics site properties."""
+        """Selective dynamics site properties."""
         return self.structure.site_properties.get("selective_dynamics")
 
     @lockxyz.setter
     def lockxyz(self, lockxyz):
         self.structure.add_site_property("selective_dynamics", lockxyz)
 
+    @classmethod
     @np.deprecate(message="Use from_str instead")
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)

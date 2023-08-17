@@ -617,7 +617,7 @@ class BSPlotter:
         handles = []
         vbm_min, cbm_max = [], []
 
-        colors = list(plt.rcParams["axes.prop_cycle"].by_key().values())[0]
+        colors = next(iter(plt.rcParams["axes.prop_cycle"].by_key().values()))
         for ibs, bs in enumerate(self._bs):
             # set first bs in the list as ref for rescaling the distances of the other bands
             bs_ref = self._bs[0] if len(self._bs) > 1 and ibs > 0 else None
@@ -1053,7 +1053,7 @@ class BSPlotterProjected(BSPlotter):
                         plt.ylim(data["vbm"][0][1] + e_min, data["cbm"][0][1] + e_max)
                 else:
                     plt.ylim(ylim)
-                plt.title(str(el) + " " + str(o))
+                plt.title(f"{el} {o}")
                 count += 1
         return plt
 
@@ -1068,9 +1068,7 @@ class BSPlotterProjected(BSPlotter):
             character for the corresponding element and orbital
         """
         band_linewidth = 1.0
-        proj = self._get_projections_by_branches(
-            {e.symbol: ["s", "p", "d"] for e in self._bs.structure.composition.elements}
-        )
+        proj = self._get_projections_by_branches({e.symbol: ["s", "p", "d"] for e in self._bs.structure.elements})
         data = self.bs_plot_data(zero_to_efermi)
         plt = pretty_plot(12, 8)
         e_min = -4
@@ -1079,7 +1077,7 @@ class BSPlotterProjected(BSPlotter):
             e_min = -10
             e_max = 10
         count = 1
-        for el in self._bs.structure.composition.elements:
+        for el in self._bs.structure.elements:
             plt.subplot(220 + count)
             self._maketicks(plt)
             for b in range(len(data["distances"])):
@@ -1168,13 +1166,11 @@ class BSPlotterProjected(BSPlotter):
             a pyplot object
         """
         band_linewidth = 3.0
-        if len(self._bs.structure.composition.elements) > 3:
+        if len(self._bs.structure.elements) > 3:
             raise ValueError
         if elt_ordered is None:
-            elt_ordered = self._bs.structure.composition.elements
-        proj = self._get_projections_by_branches(
-            {e.symbol: ["s", "p", "d"] for e in self._bs.structure.composition.elements}
-        )
+            elt_ordered = self._bs.structure.elements
+        proj = self._get_projections_by_branches({e.symbol: ["s", "p", "d"] for e in self._bs.structure.elements})
         data = self.bs_plot_data(zero_to_efermi)
         plt = pretty_plot(12, 8)
 
@@ -1696,7 +1692,7 @@ class BSPlotterProjected(BSPlotter):
                             plt.ylim(data["vbm"][0][1] + e_min, data["cbm"][0][1] + e_max)
                     else:
                         plt.ylim(ylim)
-                    plt.title(elt + " " + numa + " " + str(o))
+                    plt.title(f"{elt} {numa} {o}")
 
         return plt
 
@@ -1871,7 +1867,7 @@ class BSPlotterProjected(BSPlotter):
                     _sites = self._bs.structure.sites
                     indices = []
                     for i in range(0, len(_sites)):  # pylint: disable=C0200
-                        if list(_sites[i]._species)[0] == Element(elt):
+                        if next(iter(_sites[i]._species)) == Element(elt):
                             indices.append(i + 1)
                     for number in dictpa[elt]:
                         if isinstance(number, str):
@@ -1918,7 +1914,7 @@ class BSPlotterProjected(BSPlotter):
                         _sites = self._bs.structure.sites
                         indices = []
                         for i in range(0, len(_sites)):  # pylint: disable=C0200
-                            if list(_sites[i]._species)[0] == Element(elt):
+                            if next(iter(_sites[i]._species)) == Element(elt):
                                 indices.append(i + 1)
                         for number in sum_atoms[elt]:
                             if isinstance(number, str):
@@ -1996,18 +1992,18 @@ class BSPlotterProjected(BSPlotter):
             divide = [[]]
             divide[0].append(list_numbers[0])
             group = 0
-            for i in range(1, len(list_numbers)):
-                if list_numbers[i] == list_numbers[i - 1] + 1:
-                    divide[group].append(list_numbers[i])
+            for idx in range(1, len(list_numbers)):
+                if list_numbers[idx] == list_numbers[idx - 1] + 1:
+                    divide[group].append(list_numbers[idx])
                 else:
                     group += 1
-                    divide.append([list_numbers[i]])
+                    divide.append([list_numbers[idx]])
             label = ""
             for elem in divide:
                 if len(elem) > 1:
-                    label += str(elem[0]) + "-" + str(elem[-1]) + ","
+                    label += f"{elem[0]}-{elem[-1]},"
                 else:
-                    label += str(elem[0]) + ","
+                    label += f"{elem[0]},"
             return label[:-1]
 
         def orbital_label(list_orbitals):
@@ -2026,7 +2022,7 @@ class BSPlotterProjected(BSPlotter):
                     label += elem + ","
                 else:
                     orb_label = [orb[1:] for orb in orbs]
-                    label += elem + str(orb_label).replace("['", "").replace("']", "").replace("', '", "-") + ","
+                    label += f"{elem}{str(orb_label).replace('[' , '').replace(']' , '').replace(', ', '-')},"
             return label[:-1]
 
         if sum_atoms is None and sum_morbs is None:
@@ -2042,7 +2038,7 @@ class BSPlotterProjected(BSPlotter):
                     _sites = self._bs.structure.sites
                     indices = []
                     for i in range(0, len(_sites)):  # pylint: disable=C0200
-                        if list(_sites[i]._species)[0] == Element(elt):
+                        if next(iter(_sites[i]._species)) == Element(elt):
                             indices.append(i + 1)
                     flag_1 = len(set(dictpa[elt]).intersection(indices))
                     flag_2 = len(set(sum_atoms[elt]).intersection(indices))
@@ -2091,7 +2087,7 @@ class BSPlotterProjected(BSPlotter):
                     _sites = self._bs.structure.sites
                     indices = []
                     for i in range(0, len(_sites)):  # pylint: disable=C0200
-                        if list(_sites[i]._species)[0] == Element(elt):
+                        if next(iter(_sites[i]._species)) == Element(elt):
                             indices.append(i + 1)
                     flag_1 = len(set(dictpa[elt]).intersection(indices))
                     flag_2 = len(set(sum_atoms[elt]).intersection(indices))
@@ -2281,9 +2277,9 @@ class BSDOSPlotter:
         # make sure the user-specified band structure projection is valid
         bs_projection = self.bs_projection
         if dos:
-            elements = [e.symbol for e in dos.structure.composition.elements]
+            elements = [e.symbol for e in dos.structure.elements]
         elif bs_projection and bs.structure:
-            elements = [e.symbol for e in bs.structure.composition.elements]
+            elements = [e.symbol for e in bs.structure.elements]
         else:
             elements = []
 
@@ -2880,7 +2876,7 @@ class BoltztrapPlotter:
         plt.yticks(fontsize=25)
         if output == "tensor":
             plt.legend(
-                [str(i) + "_" + str(T) + "K" for T in temps for i in ("x", "y", "z")],
+                [f"{dim}_{T}K" for T in temps for dim in ("x", "y", "z")],
                 fontsize=20,
             )
         elif output == "average":
@@ -2940,7 +2936,7 @@ class BoltztrapPlotter:
         plt.yticks(fontsize=25)
         if output == "tensor":
             plt.legend(
-                [str(i) + "_" + str(T) + "K" for T in temps for i in ("x", "y", "z")],
+                [f"{dim}_{T}K" for T in temps for dim in ("x", "y", "z")],
                 fontsize=20,
             )
         elif output == "average":
