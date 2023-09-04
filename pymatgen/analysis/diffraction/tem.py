@@ -6,7 +6,7 @@ import json
 import os
 from collections import namedtuple
 from fractions import Fraction
-from typing import TYPE_CHECKING, List, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -99,7 +99,7 @@ class TEMCalculator(AbstractDiffractionPatternCalculator):
         points = [0, 0, 0]
         coord_values = np.arange(coord_left, coord_right + 1)
         points[0], points[1], points[2] = np.meshgrid(coord_values, coord_values, coord_values)  # type: ignore
-        points_matrix = (np.ravel(points[i]) for i in range(0, 3))
+        points_matrix = (np.ravel(points[i]) for i in range(3))
         return np.vstack(list(points_matrix)).transpose()
 
     def zone_axis_filter(
@@ -121,7 +121,7 @@ class TEMCalculator(AbstractDiffractionPatternCalculator):
             return []
         filtered = np.where(np.dot(np.array(self.beam_direction), np.transpose(points)) == laue_zone)
         result = points[filtered]  # type: ignore
-        return cast(List[Tuple[int, int, int]], [tuple(x) for x in result.tolist()])
+        return cast(list[tuple[int, int, int]], [tuple(x) for x in result.tolist()])
 
     def get_interplanar_spacings(
         self, structure: Structure, points: list[tuple[int, int, int]] | np.ndarray
@@ -148,6 +148,7 @@ class TEMCalculator(AbstractDiffractionPatternCalculator):
 
         Args:
             interplanar_spacings (dict): dictionary of hkl to interplanar spacing
+
         Returns:
             dict of hkl plane (3-tuple) to Bragg angle in radians (float)
         """
@@ -286,6 +287,7 @@ class TEMCalculator(AbstractDiffractionPatternCalculator):
             structure (Structure): The input structure.
             scaled (bool): Required value for inheritance, does nothing in TEM pattern
             two_theta_range (Tuple): Required value for inheritance, does nothing in TEM pattern
+
         Returns:
             PandasDataFrame
         """
@@ -385,6 +387,7 @@ class TEMCalculator(AbstractDiffractionPatternCalculator):
             structure (Structure): The input structure.
             p1 (3-tuple): plane 1
             p2 (3-tuple): plane 2
+
         Returns:
             float
         """

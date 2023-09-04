@@ -1,38 +1,28 @@
 """
-This module defines the VaspInputSet abstract base class and a concrete
-implementation for the parameters developed and tested by the core team
-of pymatgen, including the Materials Virtual Lab, Materials Project and the MIT
-high throughput project. The basic concept behind an input set is to specify
-a scheme to generate a consistent set of VASP inputs from a structure
-without further user intervention. This ensures comparability across
-runs.
+This module defines the VaspInputSet abstract base class and a concrete implementation for the parameters developed
+and tested by the core team of pymatgen, including the Materials Virtual Lab, Materials Project and the MIT high
+throughput project. The basic concept behind an input set is to specify a scheme to generate a consistent set of VASP
+inputs from a structure without further user intervention. This ensures comparability across runs.
 
 Read the following carefully before implementing new input sets:
 
-1. 99% of what needs to be done can be done by specifying user_incar_settings
-   to override some of the defaults of various input sets. Unless there is an
-   extremely good reason to add a new set, DO NOT add one. E.g., if you want
+1. 99% of what needs to be done can be done by specifying user_incar_settings to override some of the defaults of
+   various input sets. Unless there is an extremely good reason to add a new set, DO NOT add one. E.g., if you want
    to turn the Hubbard U off, just set "LDAU": False as a user_incar_setting.
-2. All derivative input sets should inherit from one of the usual MPRelaxSet or
-   MITRelaxSet, and proper superclass delegation should be used where possible.
-   In particular, you are not supposed to implement your own as_dict or
-   from_dict for derivative sets unless you know what you are doing.
-   Improper overriding the as_dict and from_dict protocols is the major
-   cause of implementation headaches. If you need an example, look at how the
-   MPStaticSet or MPNonSCFSets are constructed.
+2. All derivative input sets should inherit from one of the usual MPRelaxSet or MITRelaxSet, and proper superclass
+   delegation should be used where possible. In particular, you are not supposed to implement your own as_dict or
+   from_dict for derivative sets unless you know what you are doing. Improper overriding the as_dict and from_dict
+   protocols is the major cause of implementation headaches. If you need an example, look at how the MPStaticSet or
+   MPNonSCFSets are constructed.
 
 The above are recommendations. The following are UNBREAKABLE rules:
 
-1. All input sets must take in a structure or list of structures as the first
-   argument.
-2. user_incar_settings, user_kpoints_settings and user_<whatever>_settings are
-   ABSOLUTE. Any new sets you implement must obey this. If a user wants to
-   override your settings, you assume he knows what he is doing. Do not
-   magically override user supplied settings. You can issue a warning if you
-   think the user is wrong.
-3. All input sets must save all supplied args and kwargs as instance variables.
-   E.g., self.my_arg = my_arg and self.kwargs = kwargs in the __init__. This
-   ensures the as_dict and from_dict work correctly.
+1. All input sets must take in a structure or list of structures as the first argument.
+2. user_incar_settings, user_kpoints_settings and user_<whatever>_settings are ABSOLUTE. Any new sets you implement
+   must obey this. If a user wants to override your settings, you assume he knows what he is doing. Do not
+   magically override user supplied settings. You can issue a warning if you think the user is wrong.
+3. All input sets must save all supplied args and kwargs as instance variables. E.g., self.my_arg = my_arg and
+   self.kwargs = kwargs in the __init__. This ensures the as_dict and from_dict work correctly.
 """
 
 from __future__ import annotations
@@ -47,7 +37,7 @@ from copy import deepcopy
 from glob import glob
 from itertools import chain
 from pathlib import Path
-from typing import Any, Literal, Sequence, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 from zipfile import ZipFile
 
 import numpy as np
@@ -64,6 +54,9 @@ from pymatgen.io.vasp.outputs import Outcar, Vasprun
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.symmetry.bandstructure import HighSymmKpath
 from pymatgen.util.due import Doi, due
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 MODULE_DIR = Path(__file__).resolve().parent
 # TODO (janosh): replace with following line once PMG is py3.9+ only
@@ -132,11 +125,13 @@ class VaspInputSet(MSONable, metaclass=abc.ABCMeta):
 
         return potcar
 
-    def get_vasp_input(self) -> VaspInput:
+    def get_vasp_input(self, structure=None) -> VaspInput:
         """
         Returns:
             VaspInput.
         """
+        if structure is not None:
+            self.structure = structure
         return VaspInput(incar=self.incar, kpoints=self.kpoints, poscar=self.poscar, potcar=self.potcar)
 
     def write_input(
@@ -258,8 +253,8 @@ class DictSet(VaspInputSet):
 
     def __init__(
         self,
-        structure: Structure,
-        config_dict: dict[str, Any],
+        structure: Structure = None,
+        config_dict: dict[str, Any] | None = None,
         files_to_transfer=None,
         user_incar_settings=None,
         user_kpoints_settings=None,
@@ -278,99 +273,56 @@ class DictSet(VaspInputSet):
     ):
         """
         Args:
-            structure (Structure): The Structure to create inputs for.
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
             config_dict (dict): The config dictionary to use.
-            files_to_transfer (dict): A dictionary of {filename: filepath}. This
-                allows the transfer of files from a previous calculation.
-            user_incar_settings (dict): User INCAR settings. This allows a user
-                to override INCAR settings, e.g., setting a different MAGMOM for
-                various elements or species. Note that in the new scheme,
-                ediff_per_atom and hubbard_u are no longer args. Instead, the
-                config_dict supports EDIFF_PER_ATOM and EDIFF keys. The former
-                scales with # of atoms, the latter does not. If both are
-                present, EDIFF is preferred. To force such settings, just supply
-                user_incar_settings={"EDIFF": 1e-5, "LDAU": False} for example.
-                The keys 'LDAUU', 'LDAUJ', 'LDAUL' are special cases since
-                pymatgen defines different values depending on what anions are
-                present in the structure, so these keys can be defined in one
-                of two ways, e.g. either {"LDAUU":{"O":{"Fe":5}}} to set LDAUU
-                for Fe to 5 in an oxide, or {"LDAUU":{"Fe":5}} to set LDAUU to
-                5 regardless of the input structure.
-
-                If a None value is given, that key is unset. For example,
-                {"ENCUT": None} will remove ENCUT from the incar settings.
-            user_kpoints_settings (dict or Kpoints): Allow user to override kpoints
-                setting by supplying a dict E.g., {"reciprocal_density": 1000}.
-                User can also supply Kpoints object. Default is None.
-            user_potcar_settings (dict: Allow user to override POTCARs. E.g.,
-                {"Gd": "Gd_3"}. This is generally not recommended. Default is None.
-            constrain_total_magmom (bool): Whether to constrain the total magmom
-                (NUPDOWN in INCAR) to be the sum of the expected MAGMOM for all
-                species. Defaults to False.
-            sort_structure (bool): Whether to sort the structure (using the
-                default sort order of electronegativity) before generating input
-                files. Defaults to True, the behavior you would want most of the
-                time. This ensures that similar atomic species are grouped
-                together.
-            user_potcar_functional (str): Functional to use. Default (None) is to use
-                the functional in the config dictionary. Valid values:
-                "PBE", "PBE_52", "PBE_54", "LDA", "LDA_52", "LDA_54", "PW91",
+            files_to_transfer (dict): A dictionary of {filename: filepath}. This allows the transfer of files from a
+                previous calculation.
+            user_incar_settings (dict): User INCAR settings. This allows a user to override INCAR settings, e.g.,
+                setting a different MAGMOM for various elements or species. Note that in the new scheme,
+                ediff_per_atom and hubbard_u are no longer args. Instead, the config_dict supports EDIFF_PER_ATOM and
+                EDIFF keys. The former scales with # of atoms, the latter does not. If both are present,
+                EDIFF is preferred. To force such settings, just supply user_incar_settings={"EDIFF": 1e-5,
+                "LDAU": False} for example. The keys 'LDAUU', 'LDAUJ', 'LDAUL' are special cases since
+                pymatgen defines different values depending on what anions are present in the structure,
+                so these keys can be defined in one of two ways, e.g. either {"LDAUU":{"O":{"Fe":5}}} to set LDAUU
+                for Fe to 5 in an oxide, or {"LDAUU":{"Fe":5}} to set LDAUU to 5 regardless of the input structure.
+                If a None value is given, that key is unset. For example, {"ENCUT": None} will remove ENCUT from the
+                incar settings.
+            user_kpoints_settings (dict or Kpoints): Allow user to override kpoints setting by supplying a dict.
+                E.g., {"reciprocal_density": 1000}. User can also supply Kpoints object. Default is None.
+            user_potcar_settings (dict: Allow user to override POTCARs. E.g., {"Gd": "Gd_3"}. This is generally not
+                recommended. Default is None.
+            constrain_total_magmom (bool): Whether to constrain the total magmom (NUPDOWN in INCAR) to be the sum of
+                the expected MAGMOM for all species. Defaults to False.
+            sort_structure (bool): Whether to sort the structure (using the default sort order of electronegativity)
+                before generating input files. Defaults to True, the behavior you would want most of the time. This
+                ensures that similar atomic species are grouped together.
+            user_potcar_functional (str): Functional to use. Default (None) is to use the functional in the config
+                dictionary. Valid values: "PBE", "PBE_52", "PBE_54", "LDA", "LDA_52", "LDA_54", "PW91",
                 "LDA_US", "PW91_US".
-            force_gamma (bool): Force gamma centered kpoint generation. Default
-                (False) is to use the Automatic Density kpoint scheme, which
-                will use the Gamma centered generation scheme for hexagonal
+            force_gamma (bool): Force gamma centered kpoint generation. Default (False) is to use the Automatic
+                Density kpoint scheme, which will use the Gamma centered generation scheme for hexagonal
                 cells, and Monkhorst-Pack otherwise.
-            reduce_structure (None/str): Before generating the input files,
-                generate the reduced structure. Default (None), does not
-                alter the structure. Valid values: None, "niggli", "LLL".
-            vdw: Adds default parameters for van-der-Waals functionals supported
-                by VASP to INCAR. Supported functionals are: DFT-D2, undamped
-                DFT-D3, DFT-D3 with Becke-Jonson damping, Tkatchenko-Scheffler,
-                Tkatchenko-Scheffler with iterative Hirshfeld partitioning,
-                MBD@rSC, dDsC, Dion's vdW-DF, DF2, optPBE, optB88, optB86b and
-                rVV10.
-            use_structure_charge (bool): If set to True, then the public
-                variable used for setting the overall charge of the
-                structure (structure.charge) is used to set the NELECT
-                variable in the INCAR
-                Default is False (structure's overall charge is not used)
-            standardize (float): Whether to standardize to a primitive standard
-                cell. Defaults to False.
+            reduce_structure (None/str): Before generating the input files, generate the reduced structure. Default (
+                None), does not alter the structure. Valid values: None, "niggli", "LLL".
+            vdw: Adds default parameters for van-der-Waals functionals supported by VASP to INCAR. Supported
+                functionals are: DFT-D2, undamped DFT-D3, DFT-D3 with Becke-Jonson damping, Tkatchenko-Scheffler,
+                Tkatchenko-Scheffler with iterative Hirshfeld partitioning, MBD@rSC, dDsC, Dion's vdW-DF, DF2,
+                optPBE, optB88, optB86b and rVV10.
+            use_structure_charge (bool): If set to True, then the overall charge of the structure (structure.charge)
+                is used to set the NELECT variable in the INCAR. Default is False.
+            standardize (float): Whether to standardize to a primitive standard cell. Defaults to False.
             sym_prec (float): Tolerance for symmetry finding.
-            international_monoclinic (bool): Whether to use international convention
-                (vs Curtarolo) for monoclinic. Defaults True.
-            validate_magmom (bool): Ensure that the missing magmom values are filled
-                in with the VASP default value of 1.0
+            international_monoclinic (bool): Whether to use international convention (vs Curtarolo) for monoclinic.
+                Defaults True.
+            validate_magmom (bool): Ensure that the missing magmom values are filled in with the VASP default value
+                of 1.0.
         """
         if (valid_potcars := self._valid_potcars) and user_potcar_functional not in valid_potcars:
             raise ValueError(f"Invalid {user_potcar_functional=}, must be one of {valid_potcars}")
 
-        if reduce_structure:
-            structure = structure.get_reduced_structure(reduce_structure)
-        if sort_structure:
-            structure = structure.get_sorted_structure()
-        if validate_magmom:
-            get_valid_magmom_struct(structure, spin_mode="auto")
-
-        if user_potcar_functional == "PBE_54" and "W" in structure.symbol_set:
-            # when using 5.4 POTCARs, default Tungsten POTCAR to W_Sv but still allow user to override
-            user_potcar_settings = {"W": "W_sv", **(user_potcar_settings or {})}
-
-        struct_has_Yb = any(specie.symbol == "Yb" for site in structure for specie in site.species)
-        potcar_settings = config_dict.get("POTCAR", {})
-        if user_potcar_settings:
-            potcar_settings.update(user_potcar_settings)
-        uses_Yb_2_psp = potcar_settings.get("Yb", None) == "Yb_2"
-        if struct_has_Yb and uses_Yb_2_psp:
-            warnings.warn(
-                "The structure contains Ytterbium (Yb) and this InputSet uses the Yb_2 PSP.\n"
-                "Yb_2 is known to often give bad results since Yb has oxidation state 3+ in most compounds.\n"
-                "See https://github.com/materialsproject/pymatgen/issues/2968 for details.",
-                BadInputSetWarning,
-            )
-
-        self._structure = structure
-        self._config_dict = deepcopy(config_dict)
+        self._config_dict = deepcopy(config_dict) if config_dict is not None else {}
         self.files_to_transfer = files_to_transfer or {}
         self.constrain_total_magmom = constrain_total_magmom
         self.sort_structure = sort_structure
@@ -421,6 +373,8 @@ class DictSet(VaspInputSet):
                 BadInputSetWarning,
             )
 
+        self.structure = structure  # type: ignore
+
         if self.user_potcar_settings:
             warnings.warn(
                 "Overriding POTCARs is generally not recommended as it "
@@ -437,17 +391,46 @@ class DictSet(VaspInputSet):
     @property
     def structure(self) -> Structure:
         """Structure"""
-        if self.standardize and self.sym_prec:
-            return standardize_structure(
-                self._structure,
-                sym_prec=self.sym_prec,
-                international_monoclinic=self.international_monoclinic,
-            )
         return self._structure
+
+    @structure.setter
+    def structure(self, structure):
+        if structure is not None:
+            if self.user_potcar_functional == "PBE_54" and "W" in structure.symbol_set:
+                # when using 5.4 POTCARs, default Tungsten POTCAR to W_Sv but still allow user to override
+                self.user_potcar_settings = {"W": "W_sv", **(self.user_potcar_settings or {})}
+            if self.reduce_structure:
+                structure = structure.get_reduced_structure(self.reduce_structure)
+            if self.sort_structure:
+                structure = structure.get_sorted_structure()
+            if self.validate_magmom:
+                get_valid_magmom_struct(structure, spin_mode="auto")
+
+            struct_has_Yb = any(specie.symbol == "Yb" for site in structure for specie in site.species)
+            potcar_settings = self._config_dict.get("POTCAR", {})
+            if self.user_potcar_settings:
+                potcar_settings.update(self.user_potcar_settings)
+            uses_Yb_2_psp = potcar_settings.get("Yb", None) == "Yb_2"
+            if struct_has_Yb and uses_Yb_2_psp:
+                warnings.warn(
+                    "The structure contains Ytterbium (Yb) and this InputSet uses the Yb_2 PSP.\n"
+                    "Yb_2 is known to often give bad results since Yb has oxidation state 3+ in most compounds.\n"
+                    "See https://github.com/materialsproject/pymatgen/issues/2968 for details.",
+                    BadInputSetWarning,
+                )
+            if self.standardize and self.sym_prec:
+                structure = standardize_structure(
+                    structure,
+                    sym_prec=self.sym_prec,
+                    international_monoclinic=self.international_monoclinic,
+                )
+        self._structure = structure
 
     @property
     def incar(self) -> Incar:
         """Incar"""
+        if self.structure is None:
+            raise RuntimeError("No structure is associated with the input set!")
         settings = dict(self._config_dict["INCAR"])
         for k, v in self.user_incar_settings.items():
             if v is None:
@@ -596,6 +579,8 @@ class DictSet(VaspInputSet):
 
     @property
     def poscar(self) -> Poscar:
+        if self.structure is None:
+            raise RuntimeError("No structure is associated with the input set!")
         """Poscar"""
         return Poscar(self.structure)
 
@@ -630,6 +615,8 @@ class DictSet(VaspInputSet):
             Uses a simple approach scaling the number of divisions along each
             reciprocal lattice vector proportional to its length.
         """
+        if self._structure is None:
+            raise RuntimeError("No structure is associated with the input set!")
         # Return None if KSPACING is present in the INCAR, because this will
         # cause VASP to generate the kpoints automatically
         if (
@@ -856,10 +843,12 @@ class MITRelaxSet(DictSet):
 
     CONFIG = _load_yaml_config("MITRelaxSet")
 
-    def __init__(self, structure: Structure, **kwargs):
+    def __init__(self, structure: Structure | None = None, **kwargs):
         """
-        :param structure: Structure
-        :param kwargs: Same as those supported by DictSet.
+        Args:
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            **kwargs: Same as those supported by DictSet.
         """
         super().__init__(structure, MITRelaxSet.CONFIG, **kwargs)
         self.kwargs = kwargs
@@ -870,16 +859,18 @@ class MPRelaxSet(DictSet):
     Implementation of VaspInputSet utilizing parameters in the public
     Materials Project. Typically, the pseudopotentials chosen contain more
     electrons than the MIT parameters, and the k-point grid is ~50% more dense.
-    The LDAUU parameters are also different due to the different psps used,
+    The LDAUU parameters are also different due to the different PSPs used,
     which result in different fitted values.
     """
 
     CONFIG = _load_yaml_config("MPRelaxSet")
 
-    def __init__(self, structure: Structure, **kwargs):
+    def __init__(self, structure: Structure | None = None, **kwargs):
         """
-        :param structure: Structure
-        :param kwargs: Same as those supported by DictSet.
+        Args:
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            **kwargs: Same as those supported by DictSet.
         """
         super().__init__(structure, MPRelaxSet.CONFIG, **kwargs)
         self.kwargs = kwargs
@@ -929,28 +920,33 @@ class MPScanRelaxSet(DictSet):
     CONFIG = _load_yaml_config("MPSCANRelaxSet")
     _valid_potcars = ("PBE_52", "PBE_54")
 
-    def __init__(self, structure: Structure, bandgap=0, **kwargs):
+    def __init__(
+        self, structure: Structure | None = None, bandgap: float = 0, bandgap_tol: float = 1e-4, **kwargs
+    ) -> None:
         """
         Args:
-            structure (Structure): Input structure.
-            bandgap (int): Bandgap of the structure in eV. The bandgap is used to
-                    compute the appropriate k-point density and determine the
-                    smearing settings.
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            bandgap (float): Bandgap of the structure in eV. The bandgap is used to
+                compute the appropriate k-point density and determine the
+                smearing settings.
 
-                    Metallic systems (default, bandgap = 0) use a KSPACING value of 0.22
-                    and Methfessel-Paxton order 2 smearing (ISMEAR=2, SIGMA=0.2).
+                Metallic systems (default, bandgap = 0) use a KSPACING value of 0.22
+                and Methfessel-Paxton order 2 smearing (ISMEAR=2, SIGMA=0.2).
 
-                    Non-metallic systems (bandgap > 0) use the tetrahedron smearing
-                    method (ISMEAR=-5, SIGMA=0.05). The KSPACING value is
-                    calculated from the bandgap via Eqs. 25 and 29 of Wisesa, McGill,
-                    and Mueller [1] (see References). Note that if 'user_incar_settings'
-                    or 'user_kpoints_settings' override KSPACING, the calculation from
-                    bandgap is not performed.
-
+                Non-metallic systems (bandgap > 0) use the tetrahedron smearing
+                method (ISMEAR=-5, SIGMA=0.05). The KSPACING value is
+                calculated from the bandgap via Eqs. 25 and 29 of Wisesa, McGill,
+                and Mueller [1] (see References). Note that if 'user_incar_settings'
+                or 'user_kpoints_settings' override KSPACING, the calculation from
+                bandgap is not performed.
+            bandgap_tol (float): Tolerance for determining if a system is metallic.
+                If the bandgap is less than this value, the system is considered
+                metallic. Defaults to 1e-4 (eV).
             vdw (str): set "rVV10" to enable SCAN+rVV10, which is a versatile
-                    van der Waals density functional by combing the SCAN functional
-                    with the rVV10 non-local correlation functional. rvv10 is the only
-                    dispersion correction available for SCAN at this time.
+                van der Waals density functional by combing the SCAN functional
+                with the rVV10 non-local correlation functional. rvv10 is the only
+                dispersion correction available for SCAN at this time.
             **kwargs: Same as those supported by DictSet.
 
         References:
@@ -963,33 +959,21 @@ class MPScanRelaxSet(DictSet):
         super().__init__(structure, MPScanRelaxSet.CONFIG, **kwargs)
         self.bandgap = bandgap
         self.kwargs = kwargs
+        self.bandgap_tol = bandgap_tol
 
-        updates = {}
+        updates: dict[str, float] = {}
         # select the KSPACING and smearing parameters based on the bandgap
         if self.bandgap < 1e-4:
-            updates["KSPACING"] = 0.22
-            updates["SIGMA"] = 0.2
-            updates["ISMEAR"] = 2
+            updates.update(KSPACING=0.22, SIGMA=0.2, ISMEAR=2)
         else:
             rmin = 25.22 - 2.87 * bandgap  # Eq. 25
             kspacing = 2 * np.pi * 1.0265 / (rmin - 1.0183)  # Eq. 29
             # cap the KSPACING at a max of 0.44, per internal benchmarking
-            if 0.22 < kspacing < 0.44:
-                updates["KSPACING"] = kspacing
-            else:
-                updates["KSPACING"] = 0.44
-            updates["ISMEAR"] = -5
-            updates["SIGMA"] = 0.05
+            updates.update(KSPACING=kspacing if 0.22 < kspacing < 0.44 else 0.44, SIGMA=0.05, ISMEAR=-5)
 
         # Don't overwrite things the user has supplied
-        if self.user_incar_settings.get("KSPACING"):
-            del updates["KSPACING"]
-
-        if self.user_incar_settings.get("ISMEAR"):
-            del updates["ISMEAR"]
-
-        if self.user_incar_settings.get("SIGMA"):
-            del updates["SIGMA"]
+        for key in self.user_incar_settings:
+            updates.pop(key, None)
 
         if self.vdw and self.vdw != "rvv10":
             warnings.warn("Use of van der waals functionals other than rVV10 with SCAN is not supported at this time. ")
@@ -1013,14 +997,16 @@ class MPMetalRelaxSet(MPRelaxSet):
 
     CONFIG = _load_yaml_config("MPRelaxSet")
 
-    def __init__(self, structure: Structure, **kwargs):
+    def __init__(self, structure: Structure | None = None, **kwargs):
         """
-        :param structure: Structure
-        :param kwargs: Same as those supported by DictSet.
+        Args:
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            **kwargs: Same as those supported by DictSet.
         """
         super().__init__(structure, **kwargs)
         self._config_dict["INCAR"].update({"ISMEAR": 1, "SIGMA": 0.2})
-        self._config_dict["KPOINTS"].update({"reciprocal_density": 200})
+        self._config_dict["KPOINTS"]["reciprocal_density"] = 200
         self.kwargs = kwargs
 
 
@@ -1029,10 +1015,12 @@ class MPHSERelaxSet(DictSet):
 
     CONFIG = _load_yaml_config("MPHSERelaxSet")
 
-    def __init__(self, structure: Structure, **kwargs):
+    def __init__(self, structure: Structure | None = None, **kwargs):
         """
-        :param structure: Structure
-        :param kwargs: Same as those supported by DictSet.
+        Args:
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            **kwargs: Same as those supported by DictSet.
         """
         super().__init__(structure, MPHSERelaxSet.CONFIG, **kwargs)
         self.kwargs = kwargs
@@ -1084,10 +1072,10 @@ class MPStaticSet(MPRelaxSet):
         self.small_gap_multiply = small_gap_multiply
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         parent_incar = super().incar
-        incar = Incar(self.prev_incar) if self.prev_incar is not None else Incar(parent_incar)
+        incar = Incar(self.prev_incar or parent_incar)
 
         incar.update(
             {
@@ -1141,7 +1129,7 @@ class MPStaticSet(MPRelaxSet):
                     incar.update({tag: parent_incar[tag]})
             # ensure to have LMAXMIX for GGA+U static run
             if "LMAXMIX" not in incar:
-                incar.update({"LMAXMIX": parent_incar["LMAXMIX"]})
+                incar["LMAXMIX"] = parent_incar["LMAXMIX"]
 
         # Compare ediff between previous and staticinputset values,
         # choose the tighter ediff
@@ -1188,7 +1176,7 @@ class MPStaticSet(MPRelaxSet):
                 "structure."
             )
 
-        self._structure = get_structure_from_prev_run(vasprun, outcar)
+        self.structure = get_structure_from_prev_run(vasprun, outcar)
 
         # multiply the reciprocal density if needed
         if self.small_gap_multiply:
@@ -1215,6 +1203,112 @@ class MPStaticSet(MPRelaxSet):
         return input_set.override_from_prev_calc(prev_calc_dir=prev_calc_dir)
 
 
+class MatPESStaticSet(DictSet):
+    """Creates input files for a MatPES static calculation.
+
+    The goal of MatPES is to generate potential energy surface data. This is a distinctly different
+    from the objectives of the MP static calculations, which aims to obtain primarily accurate
+    energies and also electronic structure (DOS). For PES data, force accuracy (and to some extent,
+    stress accuracy) is of paramount importance.
+
+    The default POTCAR versions have been updated to PBE_54 from the old PBE set used in the
+    MPStaticSet. However, **U values** are still based on PBE. The implicit assumption here is that
+    the PBE_54 and PBE POTCARs are sufficiently similar that the U values fitted to the old PBE
+    functional still applies.
+    """
+
+    CONFIG = _load_yaml_config("MatPESStaticSet")
+
+    # These are parameters that we will inherit from any previous INCAR supplied. They are mostly parameters related
+    # to symmetry and convergence set by Custodian when errors are encountered in a previous run. Given that our goal
+    # is to have a strictly homogeneous PES data, all other parameters (e.g., ISMEAR, ALGO, etc.) are not inherited.
+    INHERITED_INCAR_PARAMS = (
+        "LPEAD",
+        "NGX",
+        "NGY",
+        "NGZ",
+        "SYMPREC",
+        "IMIX",
+        "LMAXMIX",
+        "KGAMMA",
+        "ISYM",
+        "NCORE",
+        "NPAR",
+        "NELMIN",
+        "IOPT",
+        "NBANDS",
+        "KPAR",
+        "AMIN",
+        "NELMDL",
+        "BMIX",
+        "AMIX_MAG",
+        "BMIX_MAG",
+    )
+
+    def __init__(
+        self,
+        structure: Structure | None = None,
+        xc_functional: Literal["R2SCAN", "PBE", "PBE+U"] = "PBE",
+        prev_incar: Incar | dict | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Args:
+            structure (Structure): The Structure to create inputs for. If None, the input set is initialized without
+                a Structure but one must be set separately before the inputs are generated.
+            xc_functional ('R2SCAN'|'PBE'): Exchange-correlation functional to use. Defaults to 'PBE'.
+            prev_incar (Incar | dict): Incar file from previous run. Default settings of MatPESStaticSet
+                are prioritized over inputs from previous runs. Defaults to None.
+            **kwargs: Same as those supported by DictSet.
+        """
+        valid_xc_functionals = ("R2SCAN", "PBE", "PBE+U")
+        if xc_functional.upper() not in valid_xc_functionals:
+            raise ValueError(
+                f"Unrecognized {xc_functional=}. Supported exchange-correlation functionals are {valid_xc_functionals}"
+            )
+
+        super().__init__(structure, MatPESStaticSet.CONFIG, **kwargs)
+
+        if xc_functional.upper() == "R2SCAN":
+            self._config_dict["INCAR"]["METAGGA"] = "R2SCAN"
+            self._config_dict["INCAR"]["ALGO"] = "ALL"
+            self._config_dict["INCAR"].pop("GGA", None)
+        if xc_functional.upper().endswith("+U"):
+            self._config_dict["INCAR"]["LDAU"] = True
+        user_potcar_functional = kwargs.get("user_potcar_functional", "PBE_54")
+        if user_potcar_functional.upper() != "PBE_54":
+            warnings.warn(f"{user_potcar_functional=} is inconsistent with the recommended PBE_54.", UserWarning)
+
+        self.kwargs = kwargs
+        self.xc_functional = xc_functional
+        self.prev_incar = prev_incar or {}
+
+    @property
+    def incar(self) -> Incar:
+        """Incar"""
+        incar = super().incar
+
+        for key in set(self.INHERITED_INCAR_PARAMS) & set(self.prev_incar):
+            incar[key] = self.prev_incar[key]
+        return incar
+
+    @classmethod
+    def from_prev_calc(cls, prev_calc_dir, **kwargs):
+        """
+        Generate a set of VASP input files for static calculations from a directory of previous VASP run.
+
+        Args:
+            prev_calc_dir (str): Directory containing the outputs(
+                vasprun.xml and OUTCAR) of previous vasp run.
+            **kwargs: All kwargs supported by MatPESStaticSet, other than prev_incar
+                and prev_structure and prev_kpoints which are determined from
+                the prev_calc_dir.
+        """
+        vrun = sorted(f for f in os.listdir(prev_calc_dir) if f.startswith("vasprun.xml"))[-1]
+        v = Vasprun(os.path.join(prev_calc_dir, vrun))
+        return cls(v.final_structure, prev_incar=v.incar, **kwargs)
+
+
 class MPScanStaticSet(MPScanRelaxSet):
     """
     Creates input files for a static calculation using the accurate and numerically
@@ -1222,13 +1316,14 @@ class MPScanStaticSet(MPScanRelaxSet):
     (SCAN) metaGGA functional.
     """
 
-    def __init__(self, structure: Structure, bandgap=0, prev_incar=None, lepsilon=False, lcalcpol=False, **kwargs):
+    def __init__(
+        self, structure: Structure | None = None, bandgap=0, prev_incar=None, lepsilon=False, lcalcpol=False, **kwargs
+    ):
         """
         Args:
             structure (Structure): Structure from previous run.
             bandgap (float): Bandgap of the structure in eV. The bandgap is used to
-                    compute the appropriate k-point density and determine the
-                    smearing settings.
+                compute the appropriate k-point density and determine the smearing settings.
             prev_incar (Incar): Incar file from previous run.
             lepsilon (bool): Whether to add static dielectric calculation
             lcalcpol (bool): Whether to turn on evaluation of the Berry phase approximations
@@ -1245,10 +1340,10 @@ class MPScanStaticSet(MPScanRelaxSet):
         self.lcalcpol = lcalcpol
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         parent_incar = super().incar
-        incar = Incar(self.prev_incar) if self.prev_incar is not None else Incar(parent_incar)
+        incar = Incar(self.prev_incar or parent_incar)
 
         incar.update({"LREAL": False, "NSW": 0, "LORBIT": 11, "LVHAR": True, "ISMEAR": -5})
 
@@ -1294,7 +1389,7 @@ class MPScanStaticSet(MPScanRelaxSet):
 
         self.prev_incar = vasprun.incar
 
-        self._structure = get_structure_from_prev_run(vasprun, outcar)
+        self.structure = get_structure_from_prev_run(vasprun, outcar)
 
         return self
 
@@ -1439,7 +1534,7 @@ class MPHSEBSSet(MPHSERelaxSet):
         """
         vasprun, outcar = get_vasprun_outcar(prev_calc_dir)
 
-        self._structure = get_structure_from_prev_run(vasprun, outcar)
+        self.structure = get_structure_from_prev_run(vasprun, outcar)
 
         # note: recommend not standardizing the cell because we want to retain
         # k-points
@@ -1659,7 +1754,7 @@ class MPNonSCFSet(MPRelaxSet):
         self.prev_incar = vasprun.incar
 
         # Get a Magmom-decorated structure
-        self._structure = get_structure_from_prev_run(vasprun, outcar)
+        self.structure = get_structure_from_prev_run(vasprun, outcar)
 
         if self.standardize:
             warnings.warn(
@@ -1804,7 +1899,7 @@ class MPSOCSet(MPStaticSet):
             del self.prev_incar["magmom"]
 
         # Get a magmom-decorated structure
-        self._structure = get_structure_from_prev_run(vasprun, outcar)
+        structure = get_structure_from_prev_run(vasprun, outcar)
         if self.standardize:
             warnings.warn(
                 "Use of standardize=True with from_prev_run is not "
@@ -1816,19 +1911,17 @@ class MPSOCSet(MPStaticSet):
 
         # override magmom if provided
         if self.magmom:
-            self._structure = self._structure.copy(site_properties={"magmom": self.magmom})
+            structure = structure.copy(site_properties={"magmom": self.magmom})
 
         # magmom has to be 3D for SOC calculation.
-        if hasattr(self._structure[0], "magmom"):
-            if not isinstance(self._structure[0].magmom, list):
-                self._structure = self._structure.copy(
-                    site_properties={"magmom": [[0, 0, site.magmom] for site in self._structure]}
-                )
+        if hasattr(structure[0], "magmom"):
+            if not isinstance(structure[0].magmom, list):
+                structure = structure.copy(site_properties={"magmom": [[0, 0, site.magmom] for site in structure]})
         else:
             raise ValueError("Neither the previous structure has magmom property nor magmom provided")
-
+        self.structure = structure
         nbands = int(np.ceil(vasprun.parameters["NBANDS"] * self.nbands_factor))
-        self.prev_incar.update({"NBANDS": nbands})
+        self.prev_incar["NBANDS"] = nbands
 
         files_to_transfer = {}
         if self.copy_chgcar:
@@ -1869,7 +1962,7 @@ class MPNMRSet(MPStaticSet):
 
     def __init__(
         self,
-        structure: Structure,
+        structure: Structure | None = None,
         mode: Literal["cs", "efg"] = "cs",
         isotopes: list | None = None,
         prev_incar: Incar = None,
@@ -1892,7 +1985,7 @@ class MPNMRSet(MPStaticSet):
         super().__init__(structure, prev_incar=prev_incar, reciprocal_density=reciprocal_density, **kwargs)
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         incar = super().incar
 
@@ -1954,7 +2047,7 @@ class MVLElasticSet(MPRelaxSet):
     elastic constants.
     """
 
-    def __init__(self, structure: Structure, potim: float = 0.015, **kwargs):
+    def __init__(self, structure: Structure | None = None, potim: float = 0.015, **kwargs):
         """
         Args:
             structure (pymatgen.Structure): Input structure.
@@ -2037,7 +2130,7 @@ class MVLGWSet(DictSet):
         self.ncores = ncores
 
     @property
-    def kpoints(self):
+    def kpoints(self) -> Kpoints:
         """
         Generate gamma center k-points mesh grid for GW calc,
         which is requested by GW calculation.
@@ -2045,10 +2138,10 @@ class MVLGWSet(DictSet):
         return Kpoints.automatic_density_by_vol(self.structure, self.reciprocal_density, force_gamma=True)
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         parent_incar = super().incar
-        incar = Incar(self.prev_incar) if self.prev_incar is not None else Incar(parent_incar)
+        incar = Incar(self.prev_incar or parent_incar)
 
         if self.mode == "DIAG":
             # Default parameters for diagonalization calculation.
@@ -2084,7 +2177,7 @@ class MVLGWSet(DictSet):
         """
         vasprun, outcar = get_vasprun_outcar(prev_calc_dir)
         self.prev_incar = vasprun.incar
-        self._structure = vasprun.final_structure
+        self.structure = vasprun.final_structure
 
         if self.standardize:
             warnings.warn(
@@ -2144,7 +2237,7 @@ class MVLSlabSet(MPRelaxSet):
 
     def __init__(
         self,
-        structure: Structure,
+        structure: Structure | None = None,
         k_product=50,
         bulk=False,
         auto_dipole=False,
@@ -2162,10 +2255,7 @@ class MVLSlabSet(MPRelaxSet):
         :param sort_structure:
         :param kwargs: Other kwargs supported by :class:`DictSet`.
         """
-        super().__init__(structure, **kwargs)
-
-        if sort_structure:
-            structure = structure.get_sorted_structure()
+        super().__init__(structure, sort_structure=sort_structure, **kwargs)
 
         self.k_product = k_product
         self.bulk = bulk
@@ -2173,6 +2263,10 @@ class MVLSlabSet(MPRelaxSet):
         self.kwargs = kwargs
         self.set_mix = set_mix
         self.kpt_calc = None
+
+    @property
+    def incar(self) -> Incar:
+        structure = self.structure
 
         slab_incar = {
             "EDIFF": 1e-4,
@@ -2197,8 +2291,8 @@ class MVLSlabSet(MPRelaxSet):
                 slab_incar["IDIPOL"] = 3
                 slab_incar["LDIPOL"] = True
                 slab_incar["DIPOL"] = center_of_mass
-
         self._config_dict["INCAR"].update(slab_incar)
+        return super().incar
 
     @property
     def kpoints(self):
@@ -2236,7 +2330,8 @@ class MVLSlabSet(MPRelaxSet):
     def as_dict(self, verbosity=2):
         """
         :param verbosity: Verbosity of dict. E.g., whether to include Structure.
-        :return: MSONable dict
+        Returns:
+            MSONable dict
         """
         d = MSONable.as_dict(self)
         if verbosity == 1:
@@ -2250,7 +2345,7 @@ class MVLGBSet(MPRelaxSet):
     or bulk.
     """
 
-    def __init__(self, structure: Structure, k_product=40, slab_mode=False, is_metal=True, **kwargs):
+    def __init__(self, structure: Structure | None = None, k_product=40, slab_mode=False, is_metal=True, **kwargs):
         """
         Args:
             structure(Structure): provide the structure
@@ -2302,7 +2397,7 @@ class MVLGBSet(MPRelaxSet):
         return kpt
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         incar = super().incar
 
@@ -2345,7 +2440,7 @@ class MVLRelax52Set(DictSet):
     CONFIG = _load_yaml_config("MVLRelax52Set")
     _valid_potcars = ("PBE_52", "PBE_54")
 
-    def __init__(self, structure: Structure, **kwargs) -> None:
+    def __init__(self, structure: Structure | None = None, **kwargs) -> None:
         """
         Args:
             structure (Structure): input structure.
@@ -2471,14 +2566,23 @@ class MITMDSet(MITRelaxSet):
     runs.
     """
 
-    def __init__(self, structure: Structure, start_temp, end_temp, nsteps, time_step=2, spin_polarized=False, **kwargs):
+    def __init__(
+        self,
+        structure: Structure | None = None,
+        start_temp: float = 0.0,
+        end_temp: float = 300.0,
+        nsteps: int = 1000,
+        time_step: float = 2,
+        spin_polarized=False,
+        **kwargs,
+    ):
         """
         Args:
             structure (Structure): Input structure.
-            start_temp (int): Starting temperature.
-            end_temp (int): Final temperature.
+            start_temp (float): Starting temperature.
+            end_temp (float): Final temperature.
             nsteps (int): Number of time steps for simulations. NSW parameter.
-            time_step (int): The time step for the simulation. The POTIM
+            time_step (float): The time step for the simulation. The POTIM
                 parameter. Defaults to 2fs.
             spin_polarized (bool): Whether to do spin polarized calculations.
                 The ISPIN parameter. Defaults to False.
@@ -2530,7 +2634,7 @@ class MITMDSet(MITRelaxSet):
         self._config_dict["INCAR"].update(defaults)
 
     @property
-    def kpoints(self):
+    def kpoints(self) -> Kpoints:
         """Kpoints"""
         return Kpoints.gamma_automatic()
 
@@ -2549,7 +2653,16 @@ class MPMDSet(MPRelaxSet):
     Precision remains normal, to increase accuracy of stress tensor.
     """
 
-    def __init__(self, structure: Structure, start_temp, end_temp, nsteps, spin_polarized=False, **kwargs):
+    def __init__(
+        self,
+        structure: Structure | None = None,
+        start_temp: float = 0.0,
+        end_temp: float = 300.0,
+        nsteps: int = 1000,
+        time_step: float = 2,
+        spin_polarized=False,
+        **kwargs,
+    ):
         """
         Args:
             structure (Structure): Input structure.
@@ -2585,16 +2698,12 @@ class MPMDSet(MPRelaxSet):
             "NBLOCK": 1,
             "KBLOCK": 100,
             "SMASS": 0,
-            "POTIM": 2,
+            "POTIM": time_step,
             "PREC": "Normal",
             "ISPIN": 2 if spin_polarized else 1,
             "LDAU": False,
             "ADDGRID": True,
         }
-
-        if Element("H") in structure.species:
-            defaults["POTIM"] = 0.5
-            defaults["NSW"] = defaults["NSW"] * 4
 
         super().__init__(structure, **kwargs)
 
@@ -2612,7 +2721,15 @@ class MPMDSet(MPRelaxSet):
         self._config_dict["INCAR"].update(defaults)
 
     @property
-    def kpoints(self):
+    def incar(self) -> Incar:
+        incar = super().incar
+        if Element("H") in self.structure.species:
+            incar["POTIM"] = 0.5
+            incar["NSW"] = incar["NSW"] * 4
+        return incar
+
+    @property
+    def kpoints(self) -> Kpoints:
         """Kpoints"""
         return Kpoints.gamma_automatic()
 
@@ -2626,7 +2743,16 @@ class MVLNPTMDSet(MITMDSet):
         value of ENCUT, which is 1.5 * ENMAX.
     """
 
-    def __init__(self, structure: Structure, start_temp, end_temp, nsteps, time_step=2, spin_polarized=False, **kwargs):
+    def __init__(
+        self,
+        structure: Structure | None = None,
+        start_temp: float = 0.0,
+        end_temp: float = 300.0,
+        nsteps: int = 1000,
+        time_step: float = 2,
+        spin_polarized=False,
+        **kwargs,
+    ):
         """
         Args:
             structure (Structure): input structure.
@@ -2639,13 +2765,19 @@ class MVLNPTMDSet(MITMDSet):
                 The ISPIN parameter. Defaults to False.
             **kwargs: Other kwargs supported by :class:`DictSet`.
         """
-        user_incar_settings = kwargs.get("user_incar_settings", {})
+        super().__init__(structure, start_temp, end_temp, nsteps, time_step, spin_polarized, **kwargs)
+
+    @property
+    def incar(self) -> Incar:
+        """
+        Special processing of incar.
+        """
 
         # NPT-AIMD default settings
         defaults = {
             "ALGO": "Fast",
             "ISIF": 3,
-            "LANGEVIN_GAMMA": [10] * structure.ntypesp,
+            "LANGEVIN_GAMMA": [10] * self.structure.ntypesp,
             "LANGEVIN_GAMMA_L": 1,
             "MDALGO": 3,
             "PMASS": 10,
@@ -2653,15 +2785,15 @@ class MVLNPTMDSet(MITMDSet):
             "SMASS": 0,
         }
 
-        defaults.update(user_incar_settings)
-        kwargs["user_incar_settings"] = defaults
-
-        super().__init__(structure, start_temp, end_temp, nsteps, time_step, spin_polarized, **kwargs)
+        defaults.update(self.user_incar_settings)
+        self.user_incar_settings = defaults
 
         # Set NPT-AIMD ENCUT = 1.5 * VASP_default
-        enmax = [self.potcar[i].keywords["ENMAX"] for i in range(structure.ntypesp)]
+        enmax = [self.potcar[i].keywords["ENMAX"] for i in range(self.structure.ntypesp)]
         encut = max(enmax) * 1.5
         self._config_dict["INCAR"]["ENCUT"] = encut
+
+        return super().incar
 
 
 class MVLScanRelaxSet(MPRelaxSet):
@@ -2685,7 +2817,7 @@ class MVLScanRelaxSet(MPRelaxSet):
 
     _valid_potcars = ("PBE_52", "PBE_54")
 
-    def __init__(self, structure: Structure, **kwargs):
+    def __init__(self, structure: Structure | None = None, **kwargs):
         """
         Args:
             structure (Structure): input structure.
@@ -2704,7 +2836,7 @@ class MVLScanRelaxSet(MPRelaxSet):
 
         updates = {
             "ADDGRID": True,
-            "EDIFF": 1e-05,
+            "EDIFF": 1e-5,
             "EDIFFG": -0.05,
             "LASPH": True,
             "LDAU": False,
@@ -2726,7 +2858,7 @@ class LobsterSet(MPRelaxSet):
 
     def __init__(
         self,
-        structure: Structure,
+        structure: Structure | None = None,
         isym: int = 0,
         ismear: int = -5,
         reciprocal_density: int | None = None,
@@ -2748,7 +2880,6 @@ class LobsterSet(MPRelaxSet):
                 e.g. {"Fe": "Fe_pv", "O": "O"}; if not supplied, a standard basis is used.
             **kwargs: Other kwargs supported by :class:`DictSet`.
         """
-        from pymatgen.io.lobster import Lobsterin
 
         warnings.warn("Make sure that all parameters are okay! This is a brand new implementation.")
 
@@ -2762,7 +2893,6 @@ class LobsterSet(MPRelaxSet):
         kwargs.setdefault("user_potcar_functional", "PBE_54")
 
         super().__init__(structure, **kwargs)
-
         # reciprocal density
         if self.user_kpoints_settings is not None:
             if not reciprocal_density or "reciprocal_density" not in self.user_kpoints_settings:
@@ -2775,46 +2905,51 @@ class LobsterSet(MPRelaxSet):
             self.reciprocal_density = 310
         else:
             self.reciprocal_density = reciprocal_density
-
-        self._config_dict["POTCAR"].update({"W": "W_sv"})
+        self._config_dict["POTCAR"]["W"] = "W_sv"
         self.isym = isym
         self.ismear = ismear
         self.user_supplied_basis = user_supplied_basis
         self.address_basis_file = address_basis_file
+        self._config_dict["KPOINTS"]["reciprocal_density"] = self.reciprocal_density
+
+    @property
+    def incar(self) -> Incar:
+        from pymatgen.io.lobster import Lobsterin
+
         # predefined basis! Check if the basis is okay! (charge spilling and bandoverlaps!)
-        if user_supplied_basis is None and address_basis_file is None:
-            basis = Lobsterin.get_basis(structure=structure, potcar_symbols=self.potcar_symbols)
-        elif address_basis_file is not None:
+        if self.user_supplied_basis is None and self.address_basis_file is None:
+            basis = Lobsterin.get_basis(structure=self.structure, potcar_symbols=self.potcar_symbols)
+        elif self.address_basis_file is not None:
             basis = Lobsterin.get_basis(
-                structure=structure,
+                structure=self.structure,
                 potcar_symbols=self.potcar_symbols,
-                address_basis_file=address_basis_file,
+                address_basis_file=self.address_basis_file,
             )
-        elif user_supplied_basis is not None:
+        elif self.user_supplied_basis is not None:
             # test if all elements from structure are in user_supplied_basis
-            for atomtype in structure.symbol_set:
-                if atomtype not in user_supplied_basis:
-                    raise ValueError("There are no basis functions for the atom type " + str(atomtype))
-            basis = [f"{key} {value}" for key, value in user_supplied_basis.items()]
+            for atom_type in self.structure.symbol_set:
+                if atom_type not in self.user_supplied_basis:
+                    raise ValueError(f"There are no basis functions for the atom type {atom_type}")
+            basis = [f"{key} {value}" for key, value in self.user_supplied_basis.items()]
 
         lobsterin = Lobsterin(settingsdict={"basisfunctions": basis})
-        nbands = lobsterin._get_nbands(structure=structure)
+        nbands = lobsterin._get_nbands(structure=self.structure)
 
         update_dict = {
             "EDIFF": 1e-6,
             "NSW": 0,
             "LWAVE": True,
-            "ISYM": isym,
+            "ISYM": self.isym,
             "NBANDS": nbands,
             "IBRION": -1,
-            "ISMEAR": ismear,
+            "ISMEAR": self.ismear,
             "LORBIT": 11,
             "ICHARG": 0,
             "ALGO": "Normal",
         }
 
         self._config_dict["INCAR"].update(update_dict)
-        self._config_dict["KPOINTS"].update({"reciprocal_density": self.reciprocal_density})
+        return super().incar
 
 
 def get_vasprun_outcar(path, parse_dos=True, parse_eigen=True):
@@ -2822,7 +2957,6 @@ def get_vasprun_outcar(path, parse_dos=True, parse_eigen=True):
     :param path: Path to get the vasprun.xml and OUTCAR.
     :param parse_dos: Whether to parse dos. Defaults to True.
     :param parse_eigen: Whether to parse eigenvalue. Defaults to True.
-    :return:
     """
     path = Path(path)
     vruns = list(glob(str(path / "vasprun.xml*")))
@@ -2860,9 +2994,9 @@ def get_structure_from_prev_run(vasprun, outcar=None):
     # magmom
     if vasprun.is_spin:
         if outcar and outcar.magnetization:
-            site_properties.update({"magmom": [i["tot"] for i in outcar.magnetization]})
+            site_properties["magmom"] = [i["tot"] for i in outcar.magnetization]
         else:
-            site_properties.update({"magmom": vasprun.parameters["MAGMOM"]})
+            site_properties["magmom"] = vasprun.parameters["MAGMOM"]
     # ldau
     if vasprun.parameters.get("LDAU", False):
         for k in ("LDAUU", "LDAUJ", "LDAUL"):
@@ -3106,7 +3240,7 @@ class MPAbsorptionSet(MPRelaxSet):
         self.kwargs = kwargs
 
     @property
-    def kpoints(self):
+    def kpoints(self) -> Kpoints:
         """
         Generate gamma center k-points mesh grid for optical calculation. It is not mandatory for 'ALGO = Exact',
         but is requested by 'ALGO = CHI' calculation.
@@ -3114,7 +3248,7 @@ class MPAbsorptionSet(MPRelaxSet):
         return Kpoints.automatic_density_by_vol(self.structure, self.reciprocal_density, force_gamma=True)
 
     @property
-    def incar(self):
+    def incar(self) -> Incar:
         """Incar"""
         parent_incar = super().incar
         absorption_incar = {
@@ -3140,14 +3274,14 @@ class MPAbsorptionSet(MPRelaxSet):
                 incar = Incar(self.prev_incar)
                 # Default parameters for diagonalization calculation.
                 incar.update({"ALGO": "Exact", "LOPTICS": True, "CSHIFT": 0.1, "LWAVE": "True"})
-                incar.update({"NEDOS": self.nedos}) if self.nedos is not None else incar.update({"NEDOS": 2001})
+                incar.update({"NEDOS": self.nedos or 2001})
             else:
                 incar = Incar(parent_incar)
 
         elif self.mode == "RPA":
             # Default parameters for the response function calculation. NELM has to be set to 1.
             # NOMEGA is set to 1000 in order to get smooth spectrum
-            incar = Incar(self.prev_incar) if self.prev_incar is not None else Incar(parent_incar)
+            incar = Incar(self.prev_incar or parent_incar)
             incar.update({"ALGO": "CHI", "NELM": 1, "NOMEGA": 1000})
 
             if self.nkred is not None:
@@ -3184,7 +3318,7 @@ class MPAbsorptionSet(MPRelaxSet):
         """
         vasprun, outcar = get_vasprun_outcar(prev_calc_dir)
         self.prev_incar = vasprun.incar
-        self._structure = vasprun.final_structure
+        self.structure = vasprun.final_structure
 
         # The number of bands is multiplied by the factor
         prev_nbands = int(vasprun.parameters["NBANDS"])

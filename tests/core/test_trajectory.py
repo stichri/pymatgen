@@ -4,6 +4,7 @@ import copy
 import os
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Molecule, Structure
@@ -71,7 +72,7 @@ class TestTrajectory(PymatgenTest):
 
     def test_single_index_slice(self):
         assert all(self.traj[i] == self.structures[i] for i in range(0, len(self.structures), 19))
-        assert all(self.traj_mols[i] == self.molecules[i] for i in range(0, len(self.molecules)))
+        assert all(self.traj_mols[i] == self.molecules[i] for i in range(len(self.molecules)))
 
     def test_slice(self):
         sliced_traj = self.traj[2:99:3]
@@ -430,7 +431,7 @@ class TestTrajectory(PymatgenTest):
         traj = Trajectory.from_structures(structures, constant_lattice=True)
         traj.to_displacements()
 
-        assert np.allclose(traj.coords, displacements)
+        assert_allclose(traj.coords, displacements)
 
     def test_variable_lattice(self):
         structure = self.structures[0]
@@ -456,7 +457,7 @@ class TestTrajectory(PymatgenTest):
         self._check_traj_equality(traj, written_traj)
         os.remove("traj_test_XDATCAR")
 
-    def test_to_from_dict(self):
+    def test_as_from_dict(self):
         d = self.traj.as_dict()
         traj = Trajectory.from_dict(d)
         assert isinstance(traj, Trajectory)
@@ -472,9 +473,3 @@ class TestTrajectory(PymatgenTest):
         written_traj = Trajectory.from_file("traj_test_XDATCAR")
         self._check_traj_equality(self.traj, written_traj)
         os.remove("traj_test_XDATCAR")
-
-
-if __name__ == "__main__":
-    import unittest
-
-    unittest.main()

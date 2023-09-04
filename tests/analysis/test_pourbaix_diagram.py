@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 import multiprocessing
 import unittest
-import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
 from monty.serialization import dumpfn, loadfn
 from pytest import approx
@@ -51,7 +51,7 @@ class TestPourbaixEntry(PymatgenTest):
         assert self.PxSol.nPhi == -6, "Wrong nPhi!"
         assert self.PxSol.nH2O == 3, "Wrong nH2O!"
 
-    def test_to_from_dict(self):
+    def test_as_from_dict(self):
         d = self.PxIon.as_dict()
         ion_entry = self.PxIon.from_dict(d)
         assert ion_entry.entry.name == "MnO4[-1]", "Wrong Entry!"
@@ -288,13 +288,9 @@ class TestPourbaixDiagram(unittest.TestCase):
 
 class TestPourbaixPlotter(unittest.TestCase):
     def setUp(self):
-        warnings.simplefilter("ignore")
         self.test_data = loadfn(f"{TEST_FILES_DIR}/pourbaix_test_data.json")
         self.pd = PourbaixDiagram(self.test_data["Zn"])
         self.plotter = PourbaixPlotter(self.pd)
-
-    def tearDown(self):
-        warnings.simplefilter("default")
 
     def test_plot_pourbaix(self):
         plotter = PourbaixPlotter(self.pd)
@@ -310,5 +306,5 @@ class TestPourbaixPlotter(unittest.TestCase):
         # binary system
         pd_binary = PourbaixDiagram(self.test_data["Ag-Te"], comp_dict={"Ag": 0.5, "Te": 0.5})
         binary_plotter = PourbaixPlotter(pd_binary)
-        plt = binary_plotter.plot_entry_stability(self.test_data["Ag-Te"][53])
-        plt.close()
+        ax = binary_plotter.plot_entry_stability(self.test_data["Ag-Te"][53])
+        assert isinstance(ax, plt.Axes)

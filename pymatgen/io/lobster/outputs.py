@@ -76,11 +76,13 @@ class Cohpcar:
 
     .. attribute: orb_cohp
 
-        orb_cohp[label] = {bond_data["orb_label"]: {"COHP": {Spin.up: cohps, Spin.down:cohps},
-                                                     "ICOHP": {Spin.up: icohps, Spin.down: icohps},
-                                                     "orbitals": orbitals,
-                                                     "length": bond lengths,
-                                                     "sites": sites corresponding to the bond}}
+        orb_cohp[label] = {bond_data["orb_label"]: {
+            "COHP": {Spin.up: cohps, Spin.down:cohps},
+            "ICOHP": {Spin.up: icohps, Spin.down: icohps},
+            "orbitals": orbitals,
+            "length": bond lengths,
+            "sites": sites corresponding to the bond},
+        }
 
     """
 
@@ -630,7 +632,7 @@ class Charge:
         self.types: list[str] = []
         self.Mulliken: list[float] = []
         self.Loewdin: list[float] = []
-        for atom in range(0, self.num_atoms):
+        for atom in range(self.num_atoms):
             line = data[atom].split()
             self.atomlist.append(line[1] + line[0])
             self.types.append(line[1])
@@ -642,6 +644,7 @@ class Charge:
         Get a Structure with Mulliken and Loewdin charges as site properties
         Args:
             structure_filename: filename of POSCAR
+
         Returns:
             Structure Object with Mulliken and Loewdin charges as site properties.
         """
@@ -762,11 +765,7 @@ class Lobsterout:
         self.charge_spilling = chargespilling
         self.total_spilling = totalspilling
 
-        (
-            elements,
-            basistype,
-            basisfunctions,
-        ) = self._get_elements_basistype_basisfunctions(data=data)
+        elements, basistype, basisfunctions = self._get_elements_basistype_basisfunctions(data=data)
         self.elements = elements
         self.basis_type = basistype
         self.basis_functions = basisfunctions
@@ -1043,7 +1042,7 @@ class Fatband:
     def __init__(self, filenames=".", vasprun="vasprun.xml", Kpointsfile="KPOINTS"):
         """
         Args:
-            filenames (list or string): can be a list of file names or a path to a folder folder from which all
+            filenames (list or string): can be a list of file names or a path to a folder from which all
                 "FATBAND_*" files will be read
             vasprun: corresponding vasprun file
             Kpointsfile: KPOINTS file for bandstructure calculation, typically "KPOINTS".
@@ -1292,10 +1291,12 @@ class Bandoverlaps:
     def has_good_quality_maxDeviation(self, limit_maxDeviation: float = 0.1) -> bool:
         """
         Will check if the maxDeviation from the ideal bandoverlap is smaller or equal to limit_maxDeviation
+
         Args:
-         limit_maxDeviation: limit of the maxDeviation
+            limit_maxDeviation: limit of the maxDeviation
+
         Returns:
-             Boolean that will give you information about the quality of the projection.
+            Boolean that will give you information about the quality of the projection.
         """
         return all(deviation <= limit_maxDeviation for deviation in self.max_deviation)
 
@@ -1307,16 +1308,17 @@ class Bandoverlaps:
         limit_deviation: float = 0.1,
     ) -> bool:
         """
-        Will check if the deviation from the ideal bandoverlap of all occupied bands is smaller or equal to
-        limit_deviation.
+        Will check if the deviation from the ideal bandoverlap of all occupied bands
+        is smaller or equal to limit_deviation.
 
         Args:
-        number_occ_bands_spin_up (int): number of occupied bands of spin up
-        number_occ_bands_spin_down (int): number of occupied bands of spin down
-        spin_polarized (bool):  If True, then it was a spin polarized calculation
-        limit_deviation (float): limit of the maxDeviation
+            number_occ_bands_spin_up (int): number of occupied bands of spin up
+            number_occ_bands_spin_down (int): number of occupied bands of spin down
+            spin_polarized (bool):  If True, then it was a spin polarized calculation
+            limit_deviation (float): limit of the maxDeviation
+
         Returns:
-             Boolean that will give you information about the quality of the projection
+            Boolean that will give you information about the quality of the projection
         """
         for matrix in self.bandoverlapsdict[Spin.up].values():
             for iband1, band1 in enumerate(matrix["matrix"]):
@@ -1386,6 +1388,7 @@ class Grosspop:
         Get a Structure with Mulliken and Loewdin total grosspopulations as site properties
         Args:
             structure_filename (str): filename of POSCAR
+
         Returns:
             Structure Object with Mulliken and Loewdin total grosspopulations as site properties.
         """
@@ -1437,14 +1440,7 @@ class Wavefunction:
         """
         self.filename = filename
         self.structure = structure
-
-        (
-            self.grid,
-            self.points,
-            self.real,
-            self.imaginary,
-            self.distance,
-        ) = Wavefunction._parse_file(filename)
+        self.grid, self.points, self.real, self.imaginary, self.distance = Wavefunction._parse_file(filename)
 
     @staticmethod
     def _parse_file(filename):
@@ -1492,9 +1488,9 @@ class Wavefunction:
         new_density = []
 
         runner = 0
-        for x in range(0, Nx + 1):
-            for y in range(0, Ny + 1):
-                for z in range(0, Nz + 1):
+        for x in range(Nx + 1):
+            for y in range(Ny + 1):
+                for z in range(Nz + 1):
                     x_here = x / float(Nx) * a[0] + y / float(Ny) * b[0] + z / float(Nz) * c[0]
                     y_here = x / float(Nx) * a[1] + y / float(Ny) * b[1] + z / float(Nz) * c[1]
                     z_here = x / float(Nx) * a[2] + y / float(Ny) * b[2] + z / float(Nz) * c[2]
@@ -1658,7 +1654,7 @@ class SitePotential:
         self.types: list[str] = []
         self.sitepotentials_Mulliken: list[float] = []
         self.sitepotentials_Loewdin: list[float] = []
-        for atom in range(0, self.num_atoms):
+        for atom in range(self.num_atoms):
             line = data[atom].split()
             self.atomlist.append(line[1] + str(line[0]))
             self.types.append(line[1])
@@ -1673,6 +1669,7 @@ class SitePotential:
         Get a Structure with Mulliken and Loewdin charges as site properties
         Args:
             structure_filename: filename of POSCAR
+
         Returns:
             Structure Object with Mulliken and Loewdin charges as site properties.
         """

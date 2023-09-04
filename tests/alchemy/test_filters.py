@@ -25,29 +25,29 @@ class TestContainsSpecieFilter(PymatgenTest):
         lattice = Lattice([[3.0, 0.0, 0.0], [1.0, 3.0, 0], [0, -2.0, 3.0]])
         struct = Structure(lattice, [{"Si4+": 0.5, "O2-": 0.25, "P5+": 0.25}] * 4, coords)
 
-        species1 = [Species("Si", 5), Species("Mg", 2)]
+        species1 = [Species("Si5+"), Species("Mg2+")]
         f1 = ContainsSpecieFilter(species1, strict_compare=True, AND=False)
         assert not f1.test(struct), "Incorrect filter"
         f2 = ContainsSpecieFilter(species1, strict_compare=False, AND=False)
         assert f2.test(struct), "Incorrect filter"
-        species2 = [Species("Si", 4), Species("Mg", 2)]
+        species2 = [Species("Si4+"), Species("Mg2+")]
         f3 = ContainsSpecieFilter(species2, strict_compare=True, AND=False)
         assert f3.test(struct), "Incorrect filter"
         f4 = ContainsSpecieFilter(species2, strict_compare=False, AND=False)
         assert f4.test(struct), "Incorrect filter"
 
-        species3 = [Species("Si", 5), Species("O", -2)]
+        species3 = [Species("Si5+"), Species("O2-")]
         f5 = ContainsSpecieFilter(species3, strict_compare=True, AND=True)
         assert not f5.test(struct), "Incorrect filter"
         f6 = ContainsSpecieFilter(species3, strict_compare=False, AND=True)
         assert f6.test(struct), "Incorrect filter"
-        species4 = [Species("Si", 4), Species("Mg", 2)]
+        species4 = [Species("Si4+"), Species("Mg2+")]
         f7 = ContainsSpecieFilter(species4, strict_compare=True, AND=True)
         assert not f7.test(struct), "Incorrect filter"
         f8 = ContainsSpecieFilter(species4, strict_compare=False, AND=True)
         assert not f8.test(struct), "Incorrect filter"
 
-    def test_to_from_dict(self):
+    def test_as_from_dict(self):
         species1 = ["Si5+", "Mg2+"]
         f1 = ContainsSpecieFilter(species1, strict_compare=True, AND=False)
         d = f1.as_dict()
@@ -66,7 +66,7 @@ class TestSpecieProximityFilter(PymatgenTest):
         sf = SpecieProximityFilter({"P": 5})
         assert not sf.test(struct)
 
-    def test_to_from_dict(self):
+    def test_as_from_dict(self):
         sf = SpecieProximityFilter({"Li": 1})
         d = sf.as_dict()
         assert isinstance(SpecieProximityFilter.from_dict(d), SpecieProximityFilter)
@@ -85,7 +85,7 @@ class TestRemoveDuplicatesFilter(unittest.TestCase):
         transmuter.apply_filter(dup_filter)
         assert len(transmuter.transformed_structures) == 11
 
-    def test_to_from_dict(self):
+    def test_as_from_dict(self):
         fil = RemoveDuplicatesFilter()
         d = fil.as_dict()
         assert isinstance(RemoveDuplicatesFilter().from_dict(d), RemoveDuplicatesFilter)

@@ -105,7 +105,7 @@ class LDos(MSONable):
             else:
                 ldos[i] = np.loadtxt(f"{ldos_file}{i}.dat")
 
-        for i in range(0, len(ldos[1])):
+        for i in range(len(ldos[1])):
             dos_energies.append(ldos[1][i][0])
 
         all_pdos = []
@@ -297,7 +297,7 @@ class Xmu(MSONable):
             feff_inp_file (str): filename and path of feff.inp input file
 
         Returns:
-             Xmu object
+            Xmu object
         """
         data = np.loadtxt(xmu_dat_file)
         header = Header.from_file(feff_inp_file)
@@ -421,7 +421,7 @@ class Eels(MSONable):
             eels_dat_file (str): filename and path for eels.dat
 
         Returns:
-             Eels object
+            Eels
         """
         data = np.loadtxt(eels_dat_file)
         return Eels(data)

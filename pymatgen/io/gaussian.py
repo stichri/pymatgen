@@ -16,6 +16,7 @@ from pymatgen.core.structure import Molecule
 from pymatgen.core.units import Ha_to_eV
 from pymatgen.electronic_structure.core import Spin
 from pymatgen.util.coord import get_angle
+from pymatgen.util.plotting import pretty_plot
 
 __author__ = "Shyue Ping Ong, Germain Salvato-Vallverdu, Xin Chen"
 __copyright__ = "Copyright 2013, The Materials Virtual Lab"
@@ -190,24 +191,24 @@ class GaussianInput:
             if (not zmode) and GaussianInput._xyz_patt.match(line):
                 m = GaussianInput._xyz_patt.match(line)
                 species.append(m.group(1))
-                toks = re.split(r"[,\s]+", line.strip())
-                if len(toks) > 4:
-                    coords.append([float(i) for i in toks[2:5]])
+                tokens = re.split(r"[,\s]+", line.strip())
+                if len(tokens) > 4:
+                    coords.append([float(i) for i in tokens[2:5]])
                 else:
-                    coords.append([float(i) for i in toks[1:4]])
+                    coords.append([float(i) for i in tokens[1:4]])
             elif GaussianInput._zmat_patt.match(line):
                 zmode = True
-                toks = re.split(r"[,\s]+", line.strip())
-                species.append(toks[0])
-                toks.pop(0)
-                if len(toks) == 0:
+                tokens = re.split(r"[,\s]+", line.strip())
+                species.append(tokens[0])
+                tokens.pop(0)
+                if len(tokens) == 0:
                     coords.append(np.array([0, 0, 0]))
                 else:
                     nn = []
                     parameters = []
-                    while len(toks) > 1:
-                        ind = toks.pop(0)
-                        data = toks.pop(0)
+                    while len(tokens) > 1:
+                        ind = tokens.pop(0)
+                        data = tokens.pop(0)
                         try:
                             nn.append(int(ind))
                         except ValueError:
@@ -320,9 +321,9 @@ class GaussianInput:
             ind += 1
         title = " ".join(title)
         ind += 1
-        toks = re.split(r"[,\s]+", lines[route_index + ind])
-        charge = int(float(toks[0]))
-        spin_mult = int(toks[1])
+        tokens = re.split(r"[,\s]+", lines[route_index + ind])
+        charge = int(float(tokens[0]))
+        spin_mult = int(tokens[1])
         coord_lines = []
         spaces = 0
         input_paras = {}
@@ -411,7 +412,7 @@ class GaussianInput:
         if self.link0_parameters:
             output.append(para_dict_to_string(self.link0_parameters, "\n"))
 
-        # Handle functional or basis set set to None, empty string or whitespace
+        # Handle functional or basis set to None, empty string or whitespace
         func_str = "" if self.functional is None else self.functional.strip()
         bset_str = "" if self.basis_set is None else self.basis_set.strip()
 
@@ -474,7 +475,9 @@ class GaussianInput:
     def from_dict(cls, d):
         """
         :param d: dict
-        :return: GaussianInput
+
+        Returns:
+            GaussianInput
         """
         return cls(
             mol=Molecule.from_dict(d["molecule"]),
@@ -830,9 +833,9 @@ class GaussianOutput:
                         sp = []
                         coords = []
                         while set(line.strip()) != {"-"}:
-                            toks = line.split()
-                            sp.append(Element.from_Z(int(toks[1])))
-                            coords.append([float(x) for x in toks[3:6]])
+                            tokens = line.split()
+                            sp.append(Element.from_Z(int(tokens[1])))
+                            coords.append([float(x) for x in tokens[3:6]])
                             line = f.readline()
 
                         read_coord = False
@@ -1063,7 +1066,7 @@ class GaussianOutput:
                         line = f.readline()
                         if " -- Stationary point found." not in line:
                             warnings.warn(
-                                "\n" + self.filename + ": Optimization complete but this is not a stationary point"
+                                f"\n{self.filename}: Optimization complete but this is not a stationary point"
                             )
                         if standard_orientation:
                             opt_structures.append(std_structures[-1])
@@ -1263,26 +1266,25 @@ class GaussianOutput:
         Args:
             coords: internal coordinate name to use as abscissa.
         """
-        from pymatgen.util.plotting import pretty_plot
 
-        plt = pretty_plot(12, 8)
+        ax = pretty_plot(12, 8)
 
         d = self.read_scan()
 
         if coords and coords in d["coords"]:
             x = d["coords"][coords]
-            plt.xlabel(coords)
+            ax.set_xlabel(coords)
         else:
             x = range(len(d["energies"]))
-            plt.xlabel("points")
+            ax.set_xlabel("points")
 
-        plt.ylabel("Energy (eV)")
+        ax.set_ylabel("Energy (eV)")
 
         e_min = min(d["energies"])
         y = [(e - e_min) * Ha_to_eV for e in d["energies"]]
 
-        plt.plot(x, y, "ro--")
-        return plt
+        ax.plot(x, y, "ro--")
+        return ax
 
     def save_scan_plot(self, filename="scan.pdf", img_format="pdf", coords=None):
         """
@@ -1339,9 +1341,7 @@ class GaussianOutput:
         """
         from scipy.stats import norm
 
-        from pymatgen.util.plotting import pretty_plot
-
-        plt = pretty_plot(12, 8)
+        ax = pretty_plot(12, 8)
 
         transitions = self.read_excitation_energies()
 
@@ -1357,12 +1357,12 @@ class GaussianOutput:
         for trans in transitions:
             spectre += trans[2] * norm(eneval, trans[0], sigma)
         spectre /= spectre.max()
-        plt.plot(lambdaval, spectre, "r-", label="spectre")
+        ax.plot(lambdaval, spectre, "r-", label="spectre")
 
         data = {"energies": eneval, "lambda": lambdaval, "xas": spectre}
 
         # plot transitions as vlines
-        plt.vlines(
+        ax.vlines(
             [val[1] for val in transitions],
             0.0,
             [val[2] for val in transitions],
@@ -1371,11 +1371,11 @@ class GaussianOutput:
             linewidth=2,
         )
 
-        plt.xlabel("$\\lambda$ (nm)")
-        plt.ylabel("Arbitrary unit")
-        plt.legend()
+        ax.set_xlabel("$\\lambda$ (nm)")
+        ax.set_ylabel("Arbitrary unit")
+        ax.legend()
 
-        return data, plt
+        return data, ax
 
     def save_spectre_plot(self, filename="spectre.pdf", img_format="pdf", sigma=0.05, step=0.01):
         """

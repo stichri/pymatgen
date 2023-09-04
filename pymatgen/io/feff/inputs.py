@@ -300,10 +300,10 @@ class Header(MSONable):
         """
         lines = tuple(clean_lines(header_str.split("\n"), False))
         comment1 = lines[0]
-        feffpmg = comment1.find("pymatgen")
-        if feffpmg == -1:
-            feffpmg = False
-        if feffpmg:
+        feff_pmg = comment1.find("pymatgen")
+        if feff_pmg == -1:
+            feff_pmg = False
+        if feff_pmg:
             comment2 = " ".join(lines[1].split()[2:])
 
             source = " ".join(lines[2].split()[2:])
@@ -322,17 +322,17 @@ class Header(MSONable):
 
             lattice = Lattice.from_parameters(*lengths, *angles)
 
-            natoms = int(lines[8].split(":")[-1].split()[0])
+            n_atoms = int(lines[8].split(":")[-1].split()[0])
 
             atomic_symbols = []
-            for i in range(9, 9 + natoms):
+            for i in range(9, 9 + n_atoms):
                 atomic_symbols.append(lines[i].split()[2])
 
             # read the atomic coordinates
             coords = []
-            for i in range(natoms):
-                toks = lines[i + 9].split()
-                coords.append([float(s) for s in toks[3:]])
+            for i in range(n_atoms):
+                tokens = lines[i + 9].split()
+                coords.append([float(s) for s in tokens[3:]])
 
             struct = Structure(lattice, atomic_symbols, coords, False, False, False)
 
@@ -407,8 +407,7 @@ class Atoms(MSONable):
         self.absorbing_atom, self.center_index = get_absorbing_atom_symbol_index(absorbing_atom, struct)
         self.radius = radius
         self._cluster = self._set_cluster()
-        atom_sym = get_absorbing_atom_symbol_index(absorbing_atom, self._cluster)[0]
-        self.pot_dict = get_atom_map(self._cluster, atom_sym)
+        self.pot_dict = get_atom_map(self._cluster, self.absorbing_atom)
 
     def _set_cluster(self):
         """
@@ -760,9 +759,9 @@ class Tags(dict):
 
             if key in list_type_keys:
                 output = []
-                toks = re.split(r"\s+", val)
+                tokens = re.split(r"\s+", val)
 
-                for tok in toks:
+                for tok in tokens:
                     m = re.match(r"(\d+)\*([\d\.\-\+]+)", tok)
                     if m:
                         output.extend([smart_int_or_float(m.group(2))] * int(m.group(1)))

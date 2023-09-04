@@ -12,8 +12,7 @@ from pymatgen.util.string import Stringify, charge_string, formula_double_format
 
 
 class Ion(Composition, MSONable, Stringify):
-    """
-    Ion object. Just a Composition object with an additional variable to store
+    """Ion object. Just a Composition object with an additional variable to store
     charge.
 
     The net charge can either be represented as Mn++, Mn+2, Mn[2+], Mn[++], or
@@ -21,8 +20,7 @@ class Ion(Composition, MSONable, Stringify):
     """
 
     def __init__(self, composition, charge=0.0, _properties=None):
-        """
-        Flexible Ion construction, similar to Composition.
+        """Flexible Ion construction, similar to Composition.
         For more information, please see pymatgen.core.Composition.
         """
         super().__init__(composition)
@@ -30,15 +28,15 @@ class Ion(Composition, MSONable, Stringify):
 
     @classmethod
     def from_formula(cls, formula: str) -> Ion:
-        """
-        Creates Ion from formula. The net charge can either be represented as
+        """Creates Ion from formula. The net charge can either be represented as
         Mn++, Mn+2, Mn[2+], Mn[++], or Mn[+2]. Note the order of the sign and
         magnitude in each representation.
 
         Also note that (aq) can be included in the formula, e.g. "NaOH (aq)".
 
         :param formula:
-        :return: Ion
+        Returns:
+            Ion
         """
         charge = 0.0
         f = formula
@@ -77,17 +75,16 @@ class Ion(Composition, MSONable, Stringify):
 
     @property
     def formula(self) -> str:
-        """
-        Returns a formula string, with elements sorted by electronegativity,
-        e.g., Li4 Fe4 P4 O16.
+        """Returns a formula string with appended charge. The
+        charge is written with the sign preceding the magnitude, e.g.,
+        'Ca1 +2'. Uncharged species have "(aq)" appended, e.g. "O2 (aq)".
         """
         formula = super().formula
-        return formula + " " + charge_string(self.charge, brackets=False)
+        return f"{formula} {charge_string(self.charge, brackets=False)}"
 
     @property
     def anonymized_formula(self) -> str:
-        """
-        An anonymized formula. Appends charge to the end
+        """An anonymized formula. Appends charge to the end
         of anonymized composition.
         """
         anon_formula = super().anonymized_formula
@@ -95,8 +92,7 @@ class Ion(Composition, MSONable, Stringify):
         return anon_formula + chg_str
 
     def get_reduced_formula_and_factor(self, iupac_ordering: bool = False, hydrates: bool = True) -> tuple[str, float]:
-        """
-        Calculates a reduced formula and factor.
+        """Calculates a reduced formula and factor.
 
         Similar to Composition.get_reduced_formula_and_factor except that O-H formulas
         receive special handling to differentiate between hydrogen peroxide and OH-.
@@ -171,15 +167,20 @@ class Ion(Composition, MSONable, Stringify):
         # butanol
         elif formula == "H10C4O":
             formula = "C4H9OH"
+        elif formula == "O" and factor % 3 == 0:
+            formula = "O3"
+            factor /= 3
+        elif formula in ["O", "N", "F", "Cl", "H"] and factor % 2 == 0:
+            formula += "2"
+            factor /= 2
 
         return formula, factor
 
     @property
     def reduced_formula(self) -> str:
-        """
-        Returns a reduced formula string with appended charge. The
+        """Returns a reduced formula string with appended charge. The
         charge is placed in brackets with the sign preceding the magnitude, e.g.,
-        'Ca[+2]'.
+        'Ca[+2]'. Uncharged species have "(aq)" appended, e.g. "O2(aq)".
         """
         reduced_formula = super().reduced_formula
         charge = self._charge / self.get_reduced_composition_and_factor()[1]
@@ -188,12 +189,11 @@ class Ion(Composition, MSONable, Stringify):
 
     @property
     def alphabetical_formula(self) -> str:
-        """
-        Returns a formula string, with elements sorted by alphabetically and
+        """Returns a formula string, with elements sorted by alphabetically and
         appended charge.
         """
         alph_formula = self.composition.alphabetical_formula
-        return alph_formula + " " + charge_string(self.charge, brackets=False)
+        return f"{alph_formula} {charge_string(self.charge, brackets=False)}"
 
     @property
     def charge(self) -> float:
@@ -211,8 +211,7 @@ class Ion(Composition, MSONable, Stringify):
 
     @classmethod
     def from_dict(cls, d) -> Ion:
-        """
-        Generates an ion object from a dict created by as_dict().
+        """Generates an ion object from a dict created by as_dict().
 
         Args:
             d: {symbol: amount} dict.
@@ -227,7 +226,7 @@ class Ion(Composition, MSONable, Stringify):
         """
         Returns:
             dict with element symbol and reduced amount e.g.,
-            {"Fe": 2.0, "O":3.0}.
+        {"Fe": 2.0, "O":3.0}.
         """
         d = self.composition.to_reduced_dict
         d["charge"] = self.charge
@@ -244,8 +243,7 @@ class Ion(Composition, MSONable, Stringify):
         all_oxi_states: bool = False,
         max_sites: int | None = None,
     ) -> list[dict[str, float]]:
-        """
-        Checks if the composition is charge-balanced and returns back all
+        """Checks if the composition is charge-balanced and returns back all
         charge-balanced oxidation state combinations. Composition must have
         integer values. Note that more num_atoms in the composition gives
         more degrees of freedom. e.g., if possible oxidation states of
@@ -281,9 +279,7 @@ class Ion(Composition, MSONable, Stringify):
             return NotImplemented
         if self.composition != other.composition:
             return False
-        if self.charge != other.charge:
-            return False
-        return True
+        return self.charge == other.charge
 
     def __add__(self, other):
         """Addition of two ions."""

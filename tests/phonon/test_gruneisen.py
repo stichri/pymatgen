@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import unittest
 
+import matplotlib.pyplot as plt
 from pytest import approx
 
-from pymatgen.util.testing import TEST_FILES_DIR
+from pymatgen.io.phonopy import get_gruneisen_ph_bs_symm_line, get_gruneisenparameter
+from pymatgen.phonon.gruneisen import GruneisenParameter
+from pymatgen.phonon.plotter import GruneisenPhononBandStructureSymmLine, GruneisenPhononBSPlotter, GruneisenPlotter
+from pymatgen.util.testing import TEST_FILES_DIR, PymatgenTest
 
 try:
     import phonopy
@@ -12,11 +16,6 @@ try:
 except ImportError as exc:
     print(exc)
     phonopy = TotalDos = None
-
-from pymatgen.io.phonopy import get_gruneisen_ph_bs_symm_line, get_gruneisenparameter
-from pymatgen.phonon.gruneisen import GruneisenParameter
-from pymatgen.phonon.plotter import GruneisenPhononBandStructureSymmLine, GruneisenPhononBSPlotter, GruneisenPlotter
-from pymatgen.util.testing import PymatgenTest
 
 
 class TestGruneisenPhononBandStructureSymmLine(PymatgenTest):
@@ -29,15 +28,15 @@ class TestGruneisenPhononBandStructureSymmLine(PymatgenTest):
 
     def test_plot(self):
         plotter = GruneisenPhononBSPlotter(bs=self.bs_symm_line)
-        plt = plotter.get_plot_gs()
-        assert str(type(plt)) == "<class 'module'>"
+        ax = plotter.get_plot_gs()
+        assert isinstance(ax, plt.Axes)
 
     def test_as_dict_from_dict(self):
         new_dict = self.bs_symm_line.as_dict()
         self.new_bs_symm_line = GruneisenPhononBandStructureSymmLine.from_dict(new_dict)
         plotter = GruneisenPhononBSPlotter(bs=self.new_bs_symm_line)
-        plt = plotter.get_plot_gs()
-        assert str(type(plt)) == "<class 'module'>"
+        ax = plotter.get_plot_gs()
+        assert isinstance(ax, plt.Axes)
 
 
 @unittest.skipIf(TotalDos is None, "Phonopy not present")
@@ -58,8 +57,8 @@ class TestGruneisenParameter(PymatgenTest):
 
     def test_plot(self):
         plotter = GruneisenPlotter(self.gruneisen_obj)
-        plt = plotter.get_plot(units="mev")
-        assert str(type(plt)) == "<class 'module'>"
+        ax = plotter.get_plot(units="mev")
+        assert isinstance(ax, plt.Axes)
 
     def test_fromdict_asdict(self):
         new_dict = self.gruneisen_obj.as_dict()

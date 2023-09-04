@@ -118,10 +118,7 @@ class LammpsBox(MSONable):
                 orthogonal box.
         """
         bounds_arr = np.array(bounds)
-        assert bounds_arr.shape == (
-            3,
-            2,
-        ), f"Expecting a (3, 2) array for bounds, got {bounds_arr.shape}"
+        assert bounds_arr.shape == (3, 2), f"Expecting a (3, 2) array for bounds, got {bounds_arr.shape}"
         self.bounds = bounds_arr.tolist()
         matrix = np.diag(bounds_arr[:, 1] - bounds_arr[:, 0])
 
@@ -144,8 +141,8 @@ class LammpsBox(MSONable):
     @property
     def volume(self):
         """Volume of simulation box."""
-        m = self._matrix
-        return np.dot(np.cross(m[0], m[1]), m[2])
+        matrix = self._matrix
+        return np.dot(np.cross(matrix[0], matrix[1]), matrix[2])
 
     @np.deprecate(message="Use get_str instead")
     def get_string(self, *args, **kwargs) -> str:
@@ -828,7 +825,7 @@ class LammpsData(MSONable):
             velos = np.array(struct.site_properties["velocities"])
             rot = SymmOp.from_rotation_and_translation(symm_op.rotation_matrix)
             rot_velos = rot.operate_multi(velos)
-            site_properties.update({"velocities": rot_velos})  # type: ignore
+            site_properties["velocities"] = rot_velos  # type: ignore
         boxed_s = Structure(
             box.to_lattice(),
             struct.species,
@@ -1253,19 +1250,19 @@ class CombinedData(LammpsData):
         mol_count = 0
         type_count = 0
         self.mols_per_data = []
-        for i, mol in enumerate(self.mols):
+        for idx, mol in enumerate(self.mols):
             atoms_df = mol.atoms.copy()
             atoms_df["molecule-ID"] += mol_count
             atoms_df["type"] += type_count
             mols_in_data = len(atoms_df["molecule-ID"].unique())
             self.mols_per_data.append(mols_in_data)
-            for _ in range(self.nums[i]):
+            for _ in range(self.nums[idx]):
                 self.atoms = pd.concat([self.atoms, atoms_df], ignore_index=True)
                 atoms_df["molecule-ID"] += mols_in_data
             type_count += len(mol.masses)
-            mol_count += self.nums[i] * mols_in_data
+            mol_count += self.nums[idx] * mols_in_data
         self.atoms.index += 1
-        assert len(self.atoms) == len(self._coordinates), "Wrong number of coordinates."
+        assert len(self.atoms) == len(self._coordinates), "Wrong number of coordinates"
         self.atoms.update(self._coordinates)
 
         self.velocities = None
@@ -1274,25 +1271,25 @@ class CombinedData(LammpsData):
         self.topology = {}
         atom_count = 0
         count = {"Bonds": 0, "Angles": 0, "Dihedrals": 0, "Impropers": 0}
-        for i, mol in enumerate(self.mols):
+        for idx, mol in enumerate(self.mols):
             for kw in SECTION_KEYWORDS["topology"]:
-                if bool(mol.topology) and kw in mol.topology:
+                if mol.topology and kw in mol.topology:
                     if kw not in self.topology:
                         self.topology[kw] = pd.DataFrame()
                     topo_df = mol.topology[kw].copy()
                     topo_df["type"] += count[kw]
                     for col in topo_df.columns[1:]:
                         topo_df[col] += atom_count
-                    for _ in range(self.nums[i]):
+                    for _ in range(self.nums[idx]):
                         self.topology[kw] = pd.concat([self.topology[kw], topo_df], ignore_index=True)
                         for col in topo_df.columns[1:]:
                             topo_df[col] += len(mol.atoms)
                     count[kw] += len(mol.force_field[kw[:-1] + " Coeffs"])
-            atom_count += len(mol.atoms) * self.nums[i]
+            atom_count += len(mol.atoms) * self.nums[idx]
         for kw in SECTION_KEYWORDS["topology"]:
             if kw in self.topology:
                 self.topology[kw].index += 1
-        if not bool(self.topology):
+        if not self.topology:
             self.topology = None
 
     @property
@@ -1389,11 +1386,11 @@ class CombinedData(LammpsData):
         mols = []
         styles = []
         coordinates = cls.parse_xyz(filename=coordinate_file)
-        for i in range(0, len(filenames)):
-            exec(f"cluster{i + 1} = LammpsData.from_file(filenames[i])")
-            names.append(f"cluster{i + 1}")
-            mols.append(eval(f"cluster{i + 1}"))
-            styles.append(eval(f"cluster{i + 1}").atom_style)
+        for idx in range(1, len(filenames) + 1):
+            exec(f"cluster{idx} = LammpsData.from_file(filenames[{idx - 1}])")
+            names.append(f"cluster{idx}")
+            mols.append(eval(f"cluster{idx}"))
+            styles.append(eval(f"cluster{idx}").atom_style)
         style = set(styles)
         assert len(style) == 1, "Files have different atom styles."
         return cls.from_lammpsdata(mols, names, list_of_numbers, coordinates, style.pop())
@@ -1455,15 +1452,14 @@ class CombinedData(LammpsData):
         """
         lines = LammpsData.get_str(self, distance, velocity, charge, hybrid).splitlines()
         info = "# " + " + ".join(
-            (str(a) + " " + b) if c == 1 else (str(a) + "(" + str(c) + ") " + b)
-            for a, b, c in zip(self.nums, self.names, self.mols_per_data)
+            f"{a} {b}" if c == 1 else f"{a}({c}) {b}" for a, b, c in zip(self.nums, self.names, self.mols_per_data)
         )
         lines.insert(1, info)
         return "\n".join(lines)
 
     def as_lammpsdata(self):
         """
-        Convert a CombinedData object to a LammpsData object. attributes are deepcopied.
+        Convert a CombinedData object to a LammpsData object. attributes are deep-copied.
 
         box (LammpsBox): Simulation box.
         force_field (dict): Data for force field sections. Optional

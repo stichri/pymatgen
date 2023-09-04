@@ -110,7 +110,7 @@ class AdsorbateSiteFinder:
                 are 10% less coordinated than their bulk counterpart
         """
         # TODO: for some reason this works poorly with primitive cells
-        #       may want to switch the coordination algorithm eventually
+        # may want to switch the coordination algorithm eventually
         vnn_bulk = VoronoiNN(tol=0.05)
         bulk_coords = [len(vnn_bulk.get_nn(structure, n)) for n in range(len(structure))]
         struct = structure.copy(site_properties={"bulk_coordinations": bulk_coords})
@@ -717,6 +717,5 @@ def plot_slab(
     lim_array = [center - extent * window, center + extent * window]
     x_lim = [ele[0] for ele in lim_array]
     y_lim = [ele[1] for ele in lim_array]
-    ax.set_xlim(x_lim)
-    ax.set_ylim(y_lim)
+    ax.set(xlim=x_lim, ylim=y_lim)
     return ax

@@ -7,9 +7,19 @@ import math
 import os
 import subprocess
 import time
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
+from monty.dev import requires
+from monty.serialization import loadfn
+
+from pymatgen.core.periodic_table import Species
+from pymatgen.core.sites import PeriodicSite
+from pymatgen.core.structure import Structure
+from pymatgen.util.coord import in_coord_list
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 try:
     import vtk
@@ -18,14 +28,6 @@ except ImportError:
     # VTK not present. The Camera is to set object to avoid errors in unittest.
     vtk = None
     vtkInteractorStyleTrackballCamera = object
-
-from monty.dev import requires
-from monty.serialization import loadfn
-
-from pymatgen.core.periodic_table import Species
-from pymatgen.core.sites import PeriodicSite
-from pymatgen.core.structure import Structure
-from pymatgen.util.coord import in_coord_list
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 EL_COLORS = loadfn(f"{module_dir}/ElementColorSchemes.yaml")

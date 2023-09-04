@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from scipy.constants import N_A
 
@@ -15,13 +15,14 @@ from pymatgen.core.periodic_table import Element
 from pymatgen.core.units import Charge, Time
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pymatgen.entries.computed_entries import ComputedEntry
 
 
 @dataclass
 class ConversionElectrode(AbstractElectrode):
-    """
-    Class representing a ConversionElectrode, since it is dataclass
+    """Class representing a ConversionElectrode, since it is dataclass
     this object can be constructed for the attributes.
     However, it is usually easier to construct a ConversionElectrode using one of the classmethod
     constructors provided.
@@ -44,8 +45,7 @@ class ConversionElectrode(AbstractElectrode):
 
     @classmethod
     def from_composition_and_pd(cls, comp, pd, working_ion_symbol="Li", allow_unstable=False):
-        """
-        Convenience constructor to make a ConversionElectrode from a
+        """Convenience constructor to make a ConversionElectrode from a
         composition and a phase diagram.
 
         Args:
@@ -101,8 +101,7 @@ class ConversionElectrode(AbstractElectrode):
 
     @classmethod
     def from_composition_and_entries(cls, comp, entries_in_chemsys, working_ion_symbol="Li", allow_unstable=False):
-        """
-        Convenience constructor to make a ConversionElectrode from a
+        """Convenience constructor to make a ConversionElectrode from a
         composition and all entries in a chemical system.
 
         Args:
@@ -119,8 +118,7 @@ class ConversionElectrode(AbstractElectrode):
         return ConversionElectrode.from_composition_and_pd(comp, pd, working_ion_symbol, allow_unstable)
 
     def get_sub_electrodes(self, adjacent_only=True):
-        """
-        If this electrode contains multiple voltage steps, then it is possible
+        """If this electrode contains multiple voltage steps, then it is possible
         to use only a subset of the voltage steps to define other electrodes.
         For example, an LiTiO2 electrode might contain three subelectrodes:
         [LiTiO2 --> TiO2, LiTiO2 --> Li0.5TiO2, Li0.5TiO2 --> TiO2]
@@ -161,8 +159,7 @@ class ConversionElectrode(AbstractElectrode):
         return sub_electrodes
 
     def is_super_electrode(self, conversion_electrode) -> bool:
-        """
-        Checks if a particular conversion electrode is a sub electrode of the
+        """Checks if a particular conversion electrode is a sub electrode of the
         current electrode. Starting from a more lithiated state may result in
         a subelectrode that is essentially on the same path. For example, a
         ConversionElectrode formed by starting from an FePO4 composition would
@@ -210,18 +207,20 @@ class ConversionElectrode(AbstractElectrode):
         return 7
 
     def __repr__(self):
+        cls_name, formula, n_steps = type(self).__name__, self.initial_comp.reduced_formula, self.num_steps
+        avg_voltage, min_voltage, max_voltage = self.get_average_voltage(), self.min_voltage, self.max_voltage
         output = [
-            f"Conversion electrode with formula {self.initial_comp.reduced_formula} and nsteps {self.num_steps}",
-            f"Avg voltage {self.get_average_voltage()} V, min voltage {self.min_voltage} V, "
-            f"max voltage {self.max_voltage} V",
-            f"Capacity (grav.) {self.get_capacity_grav()} mAh/g, capacity (vol.) {self.get_capacity_vol()} Ah/l",
-            f"Specific energy {self.get_specific_energy()} Wh/kg, energy density {self.get_energy_density()} Wh/l",
+            f"{cls_name} with {formula=} and {n_steps=}, {avg_voltage=:.3f} V, "
+            f"{min_voltage=:.3f} V, {max_voltage=:.3f} V",
+            f"Capacity (grav.) {self.get_capacity_grav():.3f} mAh/g, capacity (vol.) "
+            f"{self.get_capacity_vol():.3f} Ah/l",
+            f"Specific energy {self.get_specific_energy():.3f} Wh/kg, energy density "
+            f"{self.get_energy_density():.3f} Wh/l",
         ]
         return "\n".join(output)
 
     def get_summary_dict(self, print_subelectrodes=True) -> dict:
-        """
-        Generate a summary dict.
+        """Generate a summary dict.
         Populates the summary dict with the basic information from the parent method then populates more information.
         Since the parent method calls self.get_summary_dict(print_subelectrodes=True) for the subelectrodes.
         The current method will be called from within super().get_summary_dict.
@@ -255,8 +254,7 @@ class ConversionElectrode(AbstractElectrode):
 
 @dataclass
 class ConversionVoltagePair(AbstractVoltagePair):
-    """
-    A VoltagePair representing a Conversion Reaction with a defined voltage.
+    """A VoltagePair representing a Conversion Reaction with a defined voltage.
     Typically not initialized directly but rather used by ConversionElectrode.
 
     Attributes:
@@ -286,8 +284,7 @@ class ConversionVoltagePair(AbstractVoltagePair):
 
     @classmethod
     def from_steps(cls, step1, step2, normalization_els, framework_formula):
-        """
-        Creates a ConversionVoltagePair from two steps in the element profile
+        """Creates a ConversionVoltagePair from two steps in the element profile
         from a PD analysis.
 
         Args:

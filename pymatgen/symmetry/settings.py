@@ -24,8 +24,7 @@ class JonesFaithfulTransformation:
     """Transformation for space-groups defined in a non-standard setting."""
 
     def __init__(self, P, p):
-        """
-        Transform between settings using matrix P and origin shift vector p,
+        """Transform between settings using matrix P and origin shift vector p,
         using same notation as reference.
 
         Should initialize using `from_transformation_string` in Jones
@@ -56,7 +55,12 @@ class JonesFaithfulTransformation:
         self._P, self._p = P, p
 
     @classmethod
-    def from_transformation_string(cls, transformation_string="a,b,c;0,0,0"):
+    @np.deprecate(message="Use from_transformation_str instead")
+    def from_transformation_string(cls, *args, **kwargs):  # noqa: D102
+        return cls.from_transformation_str(*args, **kwargs)
+
+    @classmethod
+    def from_transformation_str(cls, transformation_string="a,b,c;0,0,0"):
         """Construct SpaceGroupTransformation from its transformation string.
 
         Args:

@@ -20,7 +20,7 @@ from operator import add
 from typing import Dict, List, Tuple, Union, Any
 
 if TYPE_CHECKING:
-    from git import Sequence
+    from collections.abc import Sequence
 
 
 class XYZ:
@@ -50,12 +50,12 @@ class XYZ:
         Returns molecule associated with this XYZ. In case of multi-frame
         XYZ, returns the last frame.
         """
-        return self._mols[-1]
+        return self._mols[-1]  # type: ignore[return-value]
 
     @property
     def all_molecules(self) -> list[Molecule]:
         """Returns all the frames of molecule associated with this XYZ."""
-        return self._mols
+        return self._mols  # type: ignore[return-value]
 
     @staticmethod
     def _from_frame_string(contents) -> Molecule:

@@ -29,18 +29,21 @@ __email__ = "shyuep@gmail.com"
 __date__ = "Apr 28, 2012"
 
 
+needs_openbabel = requires(
+    openbabel,
+    "BabelMolAdaptor requires openbabel to be installed with Python bindings. "
+    "Please get it at http://openbabel.org (version >=3.0.0).",
+)
+
+
 class BabelMolAdaptor:
     """
     Adaptor serves as a bridge between OpenBabel's Molecule and pymatgen's
     Molecule.
     """
 
-    @requires(
-        openbabel,
-        "BabelMolAdaptor requires openbabel to be installed with Python bindings. "
-        "Please get it at http://openbabel.org (version >=3.0.0).",
-    )
-    def __init__(self, mol):
+    @needs_openbabel
+    def __init__(self, mol: Molecule | openbabel.OBMol | pybel.Molecule) -> None:
         """
         Initializes with pymatgen Molecule or OpenBabel's OBMol.
 
@@ -250,7 +253,7 @@ class BabelMolAdaptor:
                 default is False.
 
         Returns:
-             (list): list of pymatgen Molecule objects for generated conformers.
+            list[Molecule]: Molecule objects for generated conformers.
         """
         if self._obmol.GetDimension() != 3:
             self.make3d()
@@ -342,6 +345,7 @@ class BabelMolAdaptor:
     def from_string(cls, *args, **kwargs):
         return cls.from_str(*args, **kwargs)
 
+    @needs_openbabel
     @staticmethod
     def from_str(string_data, file_format="xyz"):
         """
