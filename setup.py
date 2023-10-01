@@ -28,12 +28,11 @@ setup(
         include=["pymatgen.*", "pymatgen.analysis.*", "pymatgen.io.*", "pymatgen.ext.*", "cmd_line"],
         exclude=["pymatgen.*.tests", "pymatgen.*.*.tests", "pymatgen.*.*.*.tests"],
     ),
-    version="2023.9.10",
+    version="2023.9.25",
     python_requires=">=3.9",
     install_requires=[
         "matplotlib>=1.5",
         "monty>=3.0.2",
-        "mp-api>=0.27.3",
         "networkx>=2.2",
         "numpy>=1.20.1",
         "palettable>=3.1.1",
