@@ -14,6 +14,7 @@ import os
 import sys
 import warnings
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 import numpy as np
 from monty.json import MSONable
@@ -22,6 +23,9 @@ from monty.serialization import loadfn
 
 from pymatgen.core.structure import Molecule, Structure
 from pymatgen.io.feff.inputs import Atoms, Header, Potential, Tags
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 __author__ = "Kiran Mathew"
 __credits__ = "Alan Dozier, Anubhav Jain, Shyue Ping Ong"
@@ -40,7 +44,7 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 
-class AbstractFeffInputSet(MSONable, metaclass=abc.ABCMeta):
+class AbstractFeffInputSet(MSONable, abc.ABC):
     """
     Abstract base class representing a set of Feff input parameters.
     The idea is that using a FeffInputSet, a complete set of input files
@@ -55,8 +59,7 @@ class AbstractFeffInputSet(MSONable, metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def atoms(self):
-        """
-        Returns Atoms string from a structure that goes in feff.inp file.
+        """Get Atoms string from a structure that goes in feff.inp file.
 
         Returns:
             Atoms object.
@@ -91,21 +94,23 @@ class AbstractFeffInputSet(MSONable, metaclass=abc.ABCMeta):
             make_dir_if_not_present: Set to True if you want the directory (
                 and the whole path) to be created if it is not present.
         """
-        if make_dir_if_not_present and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if make_dir_if_not_present:
+            os.makedirs(output_dir, exist_ok=True)
 
         feff = self.all_input()
 
-        feff_input = "\n\n".join(str(feff[k]) for k in ["HEADER", "PARAMETERS", "POTENTIALS", "ATOMS"] if k in feff)
+        feff_input = "\n\n".join(
+            str(feff[key]) for key in ["HEADER", "PARAMETERS", "POTENTIALS", "ATOMS"] if key in feff
+        )
 
         for k, v in feff.items():
-            with open(os.path.join(output_dir, k), "w") as f:
-                f.write(str(v))
+            with open(os.path.join(output_dir, k), mode="w") as file:
+                file.write(str(v))
 
-        with open(f"{output_dir}/feff.inp", "w") as f:
-            f.write(feff_input)
+        with open(f"{output_dir}/feff.inp", mode="w") as file:
+            file.write(feff_input)
 
-        # write the structure to cif file
+        # write the structure to CIF file
         if "ATOMS" not in feff:
             self.atoms.struct.to(fmt="cif", filename=os.path.join(output_dir, feff["PARAMETERS"]["CIF"]))
 
@@ -157,7 +162,7 @@ class FEFFDictSet(AbstractFeffInputSet):
 
                     being written to the input file.
             spacegroup_analyzer_settings (dict): parameters passed to SpacegroupAnalyzer.
-                E.g., {"symprec": 0.01, "angle_tolerance": 4}
+                e.g. {"symprec": 0.01, "angle_tolerance": 4}
         """
         self.absorbing_atom = absorbing_atom
         self.user_tag_settings = user_tag_settings or {}
@@ -227,8 +232,7 @@ class FEFFDictSet(AbstractFeffInputSet):
 
     @property
     def tags(self) -> Tags:
-        """
-        FEFF job parameters.
+        """FEFF job parameters.
 
         Returns:
             Tags
@@ -244,10 +248,7 @@ class FEFFDictSet(AbstractFeffInputSet):
                     mult = (self.nkpts * abc[0] * abc[1] * abc[2]) ** (1 / 3)
                     self.config_dict["KMESH"] = [int(round(mult / length)) for length in abc]
             else:
-                logger.warning(
-                    "Large system(>=14 atoms) or EXAFS calculation, \
-                                removing K-space settings"
-                )
+                logger.warning("Large system(>=14 atoms) or EXAFS calculation, removing K-space settings")
                 del self.config_dict["RECIPROCAL"]
                 self.config_dict.pop("CIF", None)
                 self.config_dict.pop("TARGET", None)
@@ -258,8 +259,7 @@ class FEFFDictSet(AbstractFeffInputSet):
 
     @property
     def potential(self) -> Potential:
-        """
-        FEFF potential.
+        """FEFF potential.
 
         Returns:
             Potential
@@ -282,16 +282,16 @@ class FEFFDictSet(AbstractFeffInputSet):
         output.append("")
         return "\n".join(output)
 
-    @staticmethod
-    def from_directory(input_dir):
+    @classmethod
+    def from_directory(cls, input_dir: str) -> Self:
         """
         Read in a set of FEFF input files from a directory, which is
         useful when existing FEFF input needs some adjustment.
         """
-        sub_d = {}
-        for fname, ftype in [("HEADER", Header), ("PARAMETERS", Tags)]:
-            fullzpath = zpath(os.path.join(input_dir, fname))
-            sub_d[fname.lower()] = ftype.from_file(fullzpath)
+        sub_d: dict = {
+            "header": Header.from_file(zpath(os.path.join(input_dir, "HEADER"))),
+            "parameters": Tags.from_file(zpath(os.path.join(input_dir, "PARAMETERS"))),
+        }
 
         # Generation of FEFFDict set requires absorbing atom, need to search
         # the index of absorption atom in the structure according to the
@@ -299,10 +299,10 @@ class FEFFDictSet(AbstractFeffInputSet):
 
         absorber_index = []
         radius = None
-        feffinp = zpath(f"{input_dir}/feff.inp")
+        feff_inp = zpath(f"{input_dir}/feff.inp")
 
         if "RECIPROCAL" not in sub_d["parameters"]:
-            input_atoms = Atoms.cluster_from_file(feffinp)
+            input_atoms = Atoms.cluster_from_file(feff_inp)
             shell_species = np.array([x.species_string for x in input_atoms])
 
             # First row of distance matrix represents the distance from the absorber to
@@ -313,12 +313,7 @@ class FEFFDictSet(AbstractFeffInputSet):
             from math import ceil
 
             radius = int(
-                ceil(
-                    input_atoms.get_distance(
-                        input_atoms.index(input_atoms[0]),
-                        input_atoms.index(input_atoms[-1]),
-                    )
-                )
+                ceil(input_atoms.get_distance(input_atoms.index(input_atoms[0]), input_atoms.index(input_atoms[-1])))
             )
 
             for site_index, site in enumerate(sub_d["header"].struct):
@@ -342,7 +337,7 @@ class FEFFDictSet(AbstractFeffInputSet):
             CONFIG = loadfn(f"{MODULE_DIR}/MPXANESSet.yaml")
             if radius is None:
                 radius = 10
-            return FEFFDictSet(
+            return cls(
                 absorber_index[0],
                 sub_d["header"].struct,
                 radius=radius,

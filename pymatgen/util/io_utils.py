@@ -1,6 +1,5 @@
 """This module provides utility classes for io operations."""
 
-
 from __future__ import annotations
 
 import os
@@ -71,8 +70,8 @@ def micro_pyawk(filename, search, results=None, debug=None, postdebug=None):
     for entry in search:
         entry[0] = re.compile(entry[0])
 
-    with zopen(filename, "rt") as f:
-        for line in f:
+    with zopen(filename, mode="rt") as file:
+        for line in file:
             for entry in search:
                 match = re.search(entry[0], line)
                 if match and (entry[1] is None or entry[1](results, line)):

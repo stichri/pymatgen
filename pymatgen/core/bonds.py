@@ -4,13 +4,13 @@ Molecule analysis.
 
 from __future__ import annotations
 
-import collections
 import json
 import os
 import warnings
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from pymatgen.core.periodic_table import Element
+from pymatgen.core import Element
 
 if TYPE_CHECKING:
     from pymatgen.core.sites import Site
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 def _load_bond_length_data():
     """Loads bond length data from json file."""
-    with open(os.path.join(os.path.dirname(__file__), "bond_lengths.json")) as f:
-        data = collections.defaultdict(dict)
-        for row in json.load(f):
+    with open(os.path.join(os.path.dirname(__file__), "bond_lengths.json")) as file:
+        data = defaultdict(dict)
+        for row in json.load(file):
             els = sorted(row["elements"])
             data[tuple(els)][row["bond_order"]] = row["length"]
         return data
@@ -31,10 +31,10 @@ bond_lengths = _load_bond_length_data()
 
 
 class CovalentBond:
-    """Defines a covalent bond between two sites."""
+    """A covalent bond between two sites."""
 
-    def __init__(self, site1: Site, site2: Site):
-        """Initializes a covalent bond between two sites.
+    def __init__(self, site1: Site, site2: Site) -> None:
+        """Initialize a covalent bond between two sites.
 
         Args:
             site1 (Site): First site.
@@ -63,8 +63,7 @@ class CovalentBond:
                 (bond order = 1). If None, a ValueError will be thrown.
 
         Returns:
-            Float value of bond order. For example, for C-C bond in
-            benzene, return 1.7.
+            float: value of bond order. E.g. 1.7 for C-C bond in benzene.
         """
         sp1 = next(iter(self.site1.species))
         sp2 = next(iter(self.site2.species))
@@ -103,7 +102,7 @@ class CovalentBond:
             return dist < (1 + tol) * default_bl
         raise ValueError(f"No bond data for elements {syms[0]} - {syms[1]}")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Covalent bond between {self.site1} and {self.site2}"
 
 
@@ -117,7 +116,7 @@ def obtain_all_bond_lengths(sp1, sp2, default_bl: float | None = None):
             bond length as a default value (bond order = 1).
             If None, a ValueError will be thrown.
 
-    Return:
+    Returns:
         A dict mapping bond order to bond length in angstrom
     """
     if isinstance(sp1, Element):

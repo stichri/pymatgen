@@ -9,12 +9,17 @@ of numpy's ndarray with similar unit features.
 from __future__ import annotations
 
 import collections
-import numbers
+import re
+from collections import defaultdict
 from functools import partial
-from typing import Any
+from numbers import Number
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import scipy.constants as const
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 __author__ = "Shyue Ping Ong, Matteo Giantomassi"
 __copyright__ = "Copyright 2011, The Materials Project"
@@ -40,7 +45,7 @@ Definitions of supported units. Values below are essentially scaling and
 conversion factors. What matters is the relative values, not the absolute.
 The SI units must have factor 1.
 """
-BASE_UNITS = {
+BASE_UNITS: dict[str, dict] = {
     "length": {
         "m": 1,
         "km": 1000,
@@ -128,7 +133,7 @@ DERIVED_UNITS: dict[str, dict] = {
     "cross_section": {"barn": {"m": 2, 1e-28: 1}, "mbarn": {"m": 2, 1e-31: 1}},
 }
 
-ALL_UNITS: dict[str, dict] = {**BASE_UNITS, **DERIVED_UNITS}
+ALL_UNITS: dict[str, dict] = BASE_UNITS | DERIVED_UNITS
 SUPPORTED_UNIT_NAMES = tuple(i for d in ALL_UNITS.values() for i in d)
 
 # Mapping unit name --> unit type (unit names must be unique).
@@ -156,53 +161,46 @@ def _check_mappings(u):
 
 
 class Unit(collections.abc.Mapping):
-    """Represents a unit, e.g., "m" for meters, etc. Supports compound units.
+    """Represents a unit, e.g. "m" for meters, etc. Supports compound units.
     Only integer powers are supported for units.
     """
 
-    Error = UnitError
-
-    def __init__(self, unit_def):
-        """Constructs a unit.
-
+    def __init__(self, unit_def) -> None:
+        """
         Args:
             unit_def: A definition for the unit. Either a mapping of unit to
-                powers, e.g., {"m": 2, "s": -1} represents "m^2 s^-1",
+                powers, e.g. {"m": 2, "s": -1} represents "m^2 s^-1",
                 or simply as a string "kg m^2 s^-1". Note that the supported
                 format uses "^" as the power operator and all units must be
                 space-separated.
         """
         if isinstance(unit_def, str):
-            unit = collections.defaultdict(int)
-            import re
+            unit: dict[str, int] = defaultdict(int)
 
-            for m in re.finditer(r"([A-Za-z]+)\s*\^*\s*([\-0-9]*)", unit_def):
-                p = m.group(2)
-                p = 1 if not p else int(p)
-                k = m.group(1)
-                unit[k] += p
+            for match in re.finditer(r"([A-Za-z]+)\s*\^*\s*([\-0-9]*)", unit_def):
+                val = match.group(2)
+                val = 1 if not val else int(val)
+                key = match.group(1)
+                unit[key] += val
         else:
             unit = {k: v for k, v in dict(unit_def).items() if v != 0}
         self._unit = _check_mappings(unit)
 
     def __mul__(self, other):
-        new_units = collections.defaultdict(int)
+        new_units = defaultdict(int)
         for k, v in self.items():
             new_units[k] += v
         for k, v in other.items():
             new_units[k] += v
         return Unit(new_units)
 
-    def __div__(self, other):
-        new_units = collections.defaultdict(int)
+    def __truediv__(self, other):
+        new_units = defaultdict(int)
         for k, v in self.items():
             new_units[k] += v
         for k, v in other.items():
             new_units[k] -= v
         return Unit(new_units)
-
-    def __truediv__(self, other):
-        return self.__div__(other)
 
     def __pow__(self, i):
         return Unit({k: v * i for k, v in self.items()})
@@ -210,13 +208,13 @@ class Unit(collections.abc.Mapping):
     def __iter__(self):
         return iter(self._unit)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i) -> int:
         return self._unit[i]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._unit)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         sorted_keys = sorted(self._unit, key=lambda k: (-self._unit[k], k))
         return " ".join(
             [f"{k}^{self._unit[k]}" if self._unit[k] != 1 else k for k in sorted_keys if self._unit[k] != 0]
@@ -224,20 +222,20 @@ class Unit(collections.abc.Mapping):
 
     @property
     def as_base_units(self):
-        """Converts all units to base SI units, including derived units.
+        """Convert all units to base SI units, including derived units.
 
         Returns:
-            (base_units_dict, scaling factor). base_units_dict will not
-            contain any constants, which are gathered in the scaling factor.
+            tuple[dict, float]: (base_units_dict, scaling factor). base_units_dict will not
+                contain any constants, which are gathered in the scaling factor.
         """
-        b = collections.defaultdict(int)
+        b = defaultdict(int)
         factor = 1
         for k, v in self.items():
             derived = False
-            for d in DERIVED_UNITS.values():
-                if k in d:
-                    for k2, v2 in d[k].items():
-                        if isinstance(k2, numbers.Number):
+            for dct in DERIVED_UNITS.values():
+                if k in dct:
+                    for k2, v2 in dct[k].items():
+                        if isinstance(k2, Number):
                             factor *= k2 ** (v2 * v)
                         else:
                             b[k2] += v2 * v
@@ -257,16 +255,16 @@ class Unit(collections.abc.Mapping):
         Args:
             new_unit: The new unit.
         """
-        uo_base, ofactor = self.as_base_units
-        un_base, nfactor = Unit(new_unit).as_base_units
-        units_new = sorted(un_base.items(), key=lambda d: _UNAME2UTYPE[d[0]])
-        units_old = sorted(uo_base.items(), key=lambda d: _UNAME2UTYPE[d[0]])
-        factor = ofactor / nfactor
-        for uo, un in zip(units_old, units_new):
-            if uo[1] != un[1]:
-                raise UnitError(f"Units {uo} and {un} are not compatible!")
-            c = ALL_UNITS[_UNAME2UTYPE[uo[0]]]
-            factor *= (c[uo[0]] / c[un[0]]) ** uo[1]
+        old_base, old_factor = self.as_base_units
+        new_base, new_factor = Unit(new_unit).as_base_units
+        units_new = sorted(new_base.items(), key=lambda d: _UNAME2UTYPE[d[0]])
+        units_old = sorted(old_base.items(), key=lambda d: _UNAME2UTYPE[d[0]])
+        factor = old_factor / new_factor
+        for old, new in zip(units_old, units_new):
+            if old[1] != new[1]:
+                raise UnitError(f"Units {old} and {new} are not compatible!")
+            c = ALL_UNITS[_UNAME2UTYPE[old[0]]]
+            factor *= (c[old[0]] / c[new[0]]) ** old[1]
         return factor
 
 
@@ -275,7 +273,7 @@ class FloatWithUnit(float):
     pre-defined unit type subclasses such as Energy, Length, etc. instead of
     using FloatWithUnit directly.
 
-    Supports conversion, addition and subtraction of the same unit type. E.g.,
+    Supports conversion, addition and subtraction of the same unit type. e.g.
     1 m + 20 cm will be automatically converted to 1.2 m (units follow the
     leftmost quantity). Note that FloatWithUnit does not override the eq
     method for float, i.e., units are not checked when testing for equality.
@@ -292,59 +290,27 @@ class FloatWithUnit(float):
     32.932522246000005 eV
     """
 
-    Error = UnitError
-
-    @classmethod
-    @np.deprecate(message="Use from_str instead")
-    def from_string(cls, *args, **kwargs):
-        """Use from_str instead."""
-        return cls.from_str(*args, **kwargs)
-
-    @classmethod
-    def from_str(cls, s):
-        """Parse string to FloatWithUnit.
-
-        Example: Memory.from_str("1. Mb")
-        """
-        # Extract num and unit string.
-        s = s.strip()
-        for idx, char in enumerate(s):  # noqa: B007
-            if char.isalpha() or char.isspace():
-                break
-        else:
-            raise Exception(f"Unit is missing in string {s}")
-        num, unit = float(s[:idx]), s[idx:]
-
-        # Find unit type (set it to None if it cannot be detected)
-        for unit_type, d in BASE_UNITS.items():  # noqa: B007
-            if unit in d:
-                break
-        else:
-            unit_type = None
-
-        return cls(num, unit, unit_type=unit_type)
-
-    def __new__(cls, val, unit, unit_type=None):
-        """Overrides __new__ since we are subclassing a Python primitive/."""
-        new = float.__new__(cls, val)
-        new._unit = Unit(unit)
-        new._unit_type = unit_type
-        return new
-
-    def __init__(self, val, unit, unit_type=None):
-        """Initializes a float with unit.
+    def __init__(self, val: float | Number, unit: str, unit_type: str | None = None) -> None:
+        """Initialize a float with unit.
 
         Args:
             val (float): Value
-            unit (Unit): A unit. E.g., "C".
-            unit_type (str): A type of unit. E.g., "charge"
+            unit (Unit): A unit. e.g. "C".
+            unit_type (str): A type of unit. e.g. "charge"
         """
         if unit_type is not None and str(unit) not in ALL_UNITS[unit_type]:
             raise UnitError(f"{unit} is not a supported unit for {unit_type}")
         self._unit = Unit(unit)
         self._unit_type = unit_type
 
-    def __str__(self):
+    def __new__(cls, val, unit, unit_type=None) -> Self:
+        """Overrides __new__ since we are subclassing a Python primitive."""
+        new = float.__new__(cls, val)
+        new._unit = Unit(unit)
+        new._unit_type = unit_type
+        return new
+
+    def __str__(self) -> str:
         return f"{super().__str__()} {self._unit}"
 
     def __add__(self, other):
@@ -411,14 +377,34 @@ class FloatWithUnit(float):
         self._unit = state["_unit"]
 
     @property
-    def unit_type(self) -> str:
+    def unit_type(self) -> str | None:
         """The type of unit. Energy, Charge, etc."""
         return self._unit_type
 
     @property
-    def unit(self) -> str:
-        """The unit, e.g., "eV"."""
+    def unit(self) -> Unit:
+        """The unit, e.g. "eV"."""
         return self._unit
+
+    @classmethod
+    def from_str(cls, string: str) -> Self:
+        """Parse string to FloatWithUnit.
+        Example: Memory.from_str("1. Mb").
+        """
+        # Extract num and unit string.
+        string = string.strip()
+        for _idx, char in enumerate(string):
+            if char.isalpha() or char.isspace():
+                break
+        else:
+            raise ValueError(f"Unit is missing in string {string}")
+        num, unit = float(string[:_idx]), string[_idx:]
+
+        # Find unit type (set it to None if it cannot be detected)
+        for unit_type, dct in BASE_UNITS.items():
+            if unit in dct:
+                return cls(num, unit, unit_type=unit_type)
+        return cls(num, unit, unit_type=None)
 
     def to(self, new_unit):
         """Conversion to a new_unit. Right now, only supports 1 to 1 mapping of
@@ -462,7 +448,7 @@ class ArrayWithUnit(np.ndarray):
     use the pre-defined unit type subclasses such as EnergyArray,
     LengthArray, etc. instead of using ArrayWithFloatWithUnit directly.
 
-    Supports conversion, addition and subtraction of the same unit type. E.g.,
+    Supports conversion, addition and subtraction of the same unit type. e.g.
     1 m + 20 cm will be automatically converted to 1.2 m (units follow the
     leftmost quantity).
 
@@ -475,9 +461,7 @@ class ArrayWithUnit(np.ndarray):
     array([ 28.21138386,  56.42276772]) eV
     """
 
-    Error = UnitError
-
-    def __new__(cls, input_array, unit, unit_type=None):
+    def __new__(cls, input_array, unit, unit_type=None) -> Self:
         """Override __new__."""
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
@@ -503,7 +487,7 @@ class ArrayWithUnit(np.ndarray):
 
     @property
     def unit(self) -> str:
-        """The unit, e.g., "eV"."""
+        """The unit, e.g. "eV"."""
         return self._unit
 
     def __reduce__(self):
@@ -512,14 +496,13 @@ class ArrayWithUnit(np.ndarray):
         return tuple(reduce)
 
     def __setstate__(self, state):
-        # pylint: disable=E1101
         super().__setstate__(state["np_state"])
         self._unit = state["_unit"]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{np.array(self)!r} {self.unit}"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{np.array(self)} {self.unit}"
 
     def __add__(self, other):
@@ -530,7 +513,7 @@ class ArrayWithUnit(np.ndarray):
             if other.unit != self.unit:
                 other = other.to(self.unit)
 
-        return self.__class__(np.array(self) + np.array(other), unit_type=self.unit_type, unit=self.unit)
+        return type(self)(np.array(self) + np.array(other), unit_type=self.unit_type, unit=self.unit)
 
     def __sub__(self, other):
         if hasattr(other, "unit_type"):
@@ -540,7 +523,7 @@ class ArrayWithUnit(np.ndarray):
             if other.unit != self.unit:
                 other = other.to(self.unit)
 
-        return self.__class__(np.array(self) - np.array(other), unit_type=self.unit_type, unit=self.unit)
+        return type(self)(np.array(self) - np.array(other), unit_type=self.unit_type, unit=self.unit)
 
     def __mul__(self, other):
         # TODO Here we have the most important difference between FloatWithUnit and
@@ -554,43 +537,31 @@ class ArrayWithUnit(np.ndarray):
         # bit misleading.
         # Same protocol for __div__
         if not hasattr(other, "unit_type"):
-            return self.__class__(
+            return type(self)(
                 np.array(self) * np.array(other),
                 unit_type=self._unit_type,
                 unit=self._unit,
             )
         # Cannot use super since it returns an instance of self.__class__
         # while here we want a bare numpy array.
-        return self.__class__(np.array(self).__mul__(np.array(other)), unit=self.unit * other.unit)
+        return type(self)(np.array(self).__mul__(np.array(other)), unit=self.unit * other.unit)
 
     def __rmul__(self, other):
-        # pylint: disable=E1101
         if not hasattr(other, "unit_type"):
-            return self.__class__(
+            return type(self)(
                 np.array(self) * np.array(other),
                 unit_type=self._unit_type,
                 unit=self._unit,
             )
-        return self.__class__(np.array(self) * np.array(other), unit=self.unit * other.unit)
-
-    def __div__(self, other):
-        # pylint: disable=E1101
-        if not hasattr(other, "unit_type"):
-            return self.__class__(
-                np.array(self) / np.array(other),
-                unit_type=self._unit_type,
-                unit=self._unit,
-            )
-        return self.__class__(np.array(self) / np.array(other), unit=self.unit / other.unit)
+        return type(self)(np.array(self) * np.array(other), unit=self.unit * other.unit)
 
     def __truediv__(self, other):
-        # pylint: disable=E1101
         if not hasattr(other, "unit_type"):
-            return self.__class__(np.array(self) / np.array(other), unit_type=self._unit_type, unit=self._unit)
-        return self.__class__(np.array(self) / np.array(other), unit=self.unit / other.unit)
+            return type(self)(np.array(self) / np.array(other), unit_type=self._unit_type, unit=self._unit)
+        return type(self)(np.array(self) / np.array(other), unit=self.unit / other.unit)
 
     def __neg__(self):
-        return self.__class__(-np.array(self), unit_type=self.unit_type, unit=self.unit)
+        return type(self)(-np.array(self), unit_type=self.unit_type, unit=self.unit)
 
     def to(self, new_unit):
         """Conversion to a new_unit.
@@ -607,7 +578,7 @@ class ArrayWithUnit(np.ndarray):
         >>> e.to("eV")
         array([ 27.21138386,  29.93252225]) eV
         """
-        return self.__class__(
+        return type(self)(
             np.array(self) * self.unit.get_conversion_factor(new_unit),
             unit_type=self.unit_type,
             unit=new_unit,
@@ -653,7 +624,7 @@ A float with an energy unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., eV, kJ, etc. Must be valid unit or UnitError is raised.
+    unit (Unit): e.g. eV, kJ, etc. Must be valid unit or UnitError is raised.
 """
 EnergyArray = partial(ArrayWithUnit, unit_type="energy")
 
@@ -663,7 +634,7 @@ A float with a length unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., m, ang, bohr, etc. Must be valid unit or UnitError is
+    unit (Unit): e.g. m, ang, bohr, etc. Must be valid unit or UnitError is
         raised.
 """
 LengthArray = partial(ArrayWithUnit, unit_type="length")
@@ -674,7 +645,7 @@ A float with a mass unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., amu, kg, etc. Must be valid unit or UnitError is
+    unit (Unit): e.g. amu, kg, etc. Must be valid unit or UnitError is
         raised.
 """
 MassArray = partial(ArrayWithUnit, unit_type="mass")
@@ -685,7 +656,7 @@ A float with a temperature unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., K. Only K (kelvin) is supported.
+    unit (Unit): e.g. K. Only K (kelvin) is supported.
 """
 TempArray = partial(ArrayWithUnit, unit_type="temperature")
 
@@ -695,7 +666,7 @@ A float with a time unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., s, min, h. Must be valid unit or UnitError is
+    unit (Unit): e.g. s, min, h. Must be valid unit or UnitError is
         raised.
 """
 TimeArray = partial(ArrayWithUnit, unit_type="time")
@@ -706,7 +677,7 @@ A float with a charge unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., C, e (electron charge). Must be valid unit or UnitError
+    unit (Unit): e.g. C, e (electron charge). Must be valid unit or UnitError
         is raised.
 """
 ChargeArray = partial(ArrayWithUnit, unit_type="charge")
@@ -717,7 +688,7 @@ A float with a memory unit.
 
 Args:
     val (float): Value
-    unit (Unit): E.g., Kb, Mb, Gb, Tb. Must be valid unit or UnitError
+    unit (Unit): e.g. Kb, Mb, Gb, Tb. Must be valid unit or UnitError
         is raised.
 """
 
@@ -733,10 +704,12 @@ def obj_with_unit(obj: Any, unit: str) -> FloatWithUnit | ArrayWithUnit | dict[s
     """
     unit_type = _UNAME2UTYPE[unit]
 
-    if isinstance(obj, numbers.Number):
+    if isinstance(obj, Number):
         return FloatWithUnit(obj, unit=unit, unit_type=unit_type)
+
     if isinstance(obj, collections.abc.Mapping):
-        return {k: obj_with_unit(v, unit) for k, v in obj.items()}  # type: ignore
+        return {k: obj_with_unit(v, unit) for k, v in obj.items()}  # type: ignore[misc]
+
     return ArrayWithUnit(obj, unit=unit, unit_type=unit_type)
 
 
@@ -751,12 +724,10 @@ def unitized(unit):
     Args:
         unit: Specific unit (eV, Ha, m, ang, etc.).
 
-    Example usage::
-
+    Example:
         @unitized(unit="kg")
         def get_mass():
             return 123.45
-
     """
 
     def wrap(func):
@@ -775,7 +746,7 @@ def unitized(unit):
             if isinstance(val, collections.abc.Mapping):
                 for k, v in val.items():
                     val[k] = FloatWithUnit(v, unit_type=unit_type, unit=unit)
-            elif isinstance(val, numbers.Number):
+            elif isinstance(val, Number):
                 return FloatWithUnit(val, unit_type=unit_type, unit=unit)
             elif val is None:
                 pass

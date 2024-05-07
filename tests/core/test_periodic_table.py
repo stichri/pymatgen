@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import math
-import os
 import pickle
-import unittest
 from copy import deepcopy
+from enum import Enum
 
 import numpy as np
 import pytest
 from pytest import approx
 
-from pymatgen.core.periodic_table import DummySpecies, Element, ElementBase, Species, get_el_sp
+from pymatgen.core import DummySpecies, Element, Species, get_el_sp
+from pymatgen.core.periodic_table import ElementBase, ElementType
+from pymatgen.core.units import Ha_to_eV
 from pymatgen.util.testing import PymatgenTest
 
 
-class ElementTestCase(PymatgenTest):
+class TestElement(PymatgenTest):
     def test_init(self):
         assert Element("Fe").symbol == "Fe"
 
-        fictional_symbols = ["D", "T", "Zebra"]
+        fictional_symbols = ("Dolphin", "Tyrannosaurus", "Zebra")
 
         for sym in fictional_symbols:
             with pytest.raises(ValueError, match=f"{sym!r} is not a valid Element"):
@@ -40,15 +41,15 @@ class ElementTestCase(PymatgenTest):
         for non_metal in ["Ge", "Si", "O", "He"]:
             assert not Element(non_metal).is_metal
 
-    def test_nan_X(self):
+    def test_nan_x(self):
         assert math.isnan(Element.He.X)
         els = sorted([Element.He, Element.H, Element.F])
         assert els == [Element.H, Element.F, Element.He]
 
     def test_dict(self):
         fe = Element.Fe
-        d = fe.as_dict()
-        assert fe == Element.from_dict(d)
+        dct = fe.as_dict()
+        assert fe == Element.from_dict(dct)
 
     def test_block(self):
         cases = {
@@ -211,8 +212,8 @@ class ElementTestCase(PymatgenTest):
             ],  # f3
             "Ne": [["1S0"]],
         }
-        for k, v in cases.items():
-            assert Element(k).term_symbols == v
+        for key, val in cases.items():
+            assert Element(key).term_symbols == val
 
     def test_ground_state_term_symbol(self):
         cases = {
@@ -222,8 +223,8 @@ class ElementTestCase(PymatgenTest):
             "Ti": "3F2.0",  # d2
             "Pr": "4I4.5",
         }  # f3
-        for k, v in cases.items():
-            assert Element(k).ground_state_term_symbol == v
+        for key, val in cases.items():
+            assert Element(key).ground_state_term_symbol == val
 
     def test_attributes(self):
         is_true = {
@@ -238,71 +239,79 @@ class ElementTestCase(PymatgenTest):
             ("O", "Te"): "is_chalcogen",
         }
 
-        for k, v in is_true.items():
-            for sym in k:
-                assert getattr(Element(sym), v), sym + " is false"
+        for key, val in is_true.items():
+            for sym in key:
+                assert getattr(Element(sym), val), f"{sym=} is false"
 
-        keys = [
-            "mendeleev_no",
+        keys = (
             "atomic_mass",
-            "electronic_structure",
+            "atomic_orbitals",
+            "atomic_orbitals_eV",
             "atomic_radius",
-            "min_oxidation_state",
-            "max_oxidation_state",
+            "average_anionic_radius",
+            "average_cationic_radius",
+            "average_ionic_radius",
+            "boiling_point",
+            "brinell_hardness",
+            "bulk_modulus",
+            "coefficient_of_linear_thermal_expansion",
+            "common_oxidation_states",
+            "critical_temperature",
+            "density_of_solid",
             "electrical_resistivity",
-            "velocity_of_sound",
+            "electronic_structure",
+            "ground_level",
+            "ionic_radii",
+            "ionization_energies",
+            "iupac_ordering",
+            "liquid_range",
+            "long_name",
+            "max_oxidation_state",
+            "melting_point",
+            "mendeleev_no",
+            "metallic_radius",
+            "min_oxidation_state",
+            "mineral_hardness",
+            "molar_volume",
+            "oxidation_states",
+            "poissons_ratio",
             "reflectivity",
             "refractive_index",
-            "poissons_ratio",
-            "molar_volume",
-            "thermal_conductivity",
-            "melting_point",
-            "boiling_point",
-            "liquid_range",
-            "critical_temperature",
-            "superconduction_temperature",
-            "bulk_modulus",
-            "youngs_modulus",
-            "brinell_hardness",
             "rigidity_modulus",
-            "mineral_hardness",
+            "superconduction_temperature",
+            "thermal_conductivity",
+            "velocity_of_sound",
             "vickers_hardness",
-            "density_of_solid",
-            "atomic_orbitals",
-            "coefficient_of_linear_thermal_expansion",
-            "oxidation_states",
-            "common_oxidation_states",
-            "average_ionic_radius",
-            "average_cationic_radius",
-            "average_anionic_radius",
-            "ionic_radii",
-            "long_name",
-            "metallic_radius",
-            "iupac_ordering",
-            "ground_level",
-            "ionization_energies",
-        ]
+            "youngs_modulus",
+        )
 
         # Test all elements up to Uranium
         for idx in range(1, 104):
             el = Element.from_Z(idx)
-            d = el.data
-            for k in keys:
-                k_str = k.capitalize().replace("_", " ")
-                if k_str in d and (not str(d[k_str]).startswith("no data")):
-                    assert getattr(el, k) is not None
-                elif k == "long_name":
-                    assert el.long_name == d["Name"]
-                elif k == "iupac_ordering":
-                    assert "IUPAC ordering" in d
-                    assert getattr(el, k) is not None
-            el = Element.from_Z(idx)
+            for key in keys:
+                key_str = key.capitalize().replace("_", " ")
+                if key_str in el.data and (not str(el.data[key_str]).startswith("no data")):
+                    assert getattr(el, key) is not None
+                elif key == "long_name":
+                    assert el.long_name == el.data["Name"]
+                elif key == "iupac_ordering":
+                    assert "IUPAC ordering" in el.data
+                    assert getattr(el, key) is not None
+
             if len(el.oxidation_states) > 0:
                 assert max(el.oxidation_states) == el.max_oxidation_state
                 assert min(el.oxidation_states) == el.min_oxidation_state
 
-            if el.symbol not in ["He", "Ne", "Ar"]:
+            if el.symbol not in {"He", "Ne", "Ar"}:
                 assert el.X > 0, f"No electroneg for {el}"
+
+            # check atomic_orbitals_eV is Ha_to_eV * atomic_orbitals
+        for el in Element:
+            if el.atomic_orbitals is None:
+                continue
+            assert el.atomic_orbitals_eV == approx(
+                {orb: energy * Ha_to_eV for orb, energy in el.atomic_orbitals.items()}
+            )
 
         with pytest.raises(ValueError, match="Unexpected atomic number Z=1000"):
             Element.from_Z(1000)
@@ -358,8 +367,16 @@ class ElementTestCase(PymatgenTest):
     def test_is(self):
         assert Element("Bi").is_post_transition_metal, True
 
+    def test_isotope(self):
+        elems = [Element(el) for el in ("H", "D", "T")]
+        assert [x.symbol for x in elems] == ["H", "H", "H"]
+        assert list(map(str, elems)) == ["H", "H", "H"]
+        assert [el.A for el in elems] == [1, 2, 3]
+        assert all(abs(el.atomic_mass - idx - 1) < 0.1 for idx, el in enumerate(elems))
+        assert [el.atomic_mass for el in elems] == [1.00794, 2.013553212712, 3.0155007134]
 
-class SpeciesTestCase(PymatgenTest):
+
+class TestSpecies(PymatgenTest):
     def setUp(self):
         self.specie1 = Species.from_str("Fe2+")
         self.specie2 = Species("Fe", 3)
@@ -383,6 +400,9 @@ class SpeciesTestCase(PymatgenTest):
         assert self.specie4 != self.specie3
         assert self.specie1 != Element("Fe")
         assert Element("Fe") != self.specie1
+        assert Element("Fe") == Element("Fe")
+        assert Species("Fe", 0) != Element("Fe")
+        assert Element("Fe") != Species("Fe", 0)
 
     def test_cmp(self):
         assert self.specie1 < self.specie2, "Fe2+ should be < Fe3+"
@@ -393,9 +413,7 @@ class SpeciesTestCase(PymatgenTest):
         assert self.specie4.spin == 5
 
     def test_deepcopy(self):
-        el1 = Species("Fe4+")
-        el2 = Species("Na1+")
-        elem_list = [el1, el2]
+        elem_list = [Species("Fe4+"), Species("Na1+")]
         assert elem_list == deepcopy(elem_list), "Deepcopy operation doesn't produce exact copy."
 
     def test_pickle(self):
@@ -405,13 +423,12 @@ class SpeciesTestCase(PymatgenTest):
         cs = Species("Cs1+")
         cl = Species("Cl1+")
 
-        with open("cscl.pickle", "wb") as file:
+        with open(f"{self.tmp_path}/cscl.pickle", "wb") as file:
             pickle.dump((cs, cl), file)
 
-        with open("cscl.pickle", "rb") as file:
+        with open(f"{self.tmp_path}/cscl.pickle", "rb") as file:
             tup = pickle.load(file)
             assert tup == (cs, cl)
-        os.remove("cscl.pickle")
 
     def test_get_crystal_field_spin(self):
         assert Species("Fe", 2).get_crystal_field_spin() == 4
@@ -424,15 +441,18 @@ class SpeciesTestCase(PymatgenTest):
 
         for elem in ("Li+", "Ge4+", "H+"):
             symbol = Species(elem).symbol
-            with pytest.raises(AttributeError, match=f"Invalid element {symbol} for crystal field calculation"):
+            with pytest.raises(
+                AttributeError,
+                match=f"Invalid element {symbol} for crystal field calculation",
+            ):
                 Species(elem).get_crystal_field_spin()
         with pytest.raises(AttributeError, match="Invalid oxidation state 10 for element Fe"):
             Species("Fe", 10).get_crystal_field_spin()
         with pytest.raises(ValueError, match="Invalid coordination or spin config"):
             Species("Fe", 2).get_crystal_field_spin("hex")
 
-        s = Species("Co", 3).get_crystal_field_spin("tet", spin_config="low")
-        assert s == 2
+        spin = Species("Co", 3).get_crystal_field_spin("tet", spin_config="low")
+        assert spin == 2
 
     def test_get_nmr_mom(self):
         assert Species("H").get_nmr_quadrupole_moment() == 2.860
@@ -466,7 +486,7 @@ class SpeciesTestCase(PymatgenTest):
         els = map(get_el_sp, ["N3-", "Si4+", "Si3+"])
         assert sorted(els) == [Species("Si", 3), Species("Si", 4), Species("N", -3)]
 
-    def test_to_from_string(self):
+    def test_to_from_str(self):
         fe3 = Species("Fe", 3, spin=5)
         assert str(fe3) == "Fe3+,spin=5"
         fe = Species.from_str("Fe3+,spin=5")
@@ -513,7 +533,7 @@ def test_symbol_oxi_state_str(symbol_oxi, expected_element, expected_oxi_state):
     assert species._oxi_state == expected_oxi_state
 
 
-class DummySpeciesTestCase(unittest.TestCase):
+class TestDummySpecies:
     def test_init(self):
         self.specie1 = DummySpecies("X")
         with pytest.raises(ValueError, match="Xe contains Xe, which is a valid element symbol"):
@@ -534,7 +554,7 @@ class DummySpeciesTestCase(unittest.TestCase):
         assert DummySpecies("Xg") != DummySpecies("Xg", 3)
         assert DummySpecies("Xg", 3) == DummySpecies("Xg", 3)
 
-    def test_from_string(self):
+    def test_from_str(self):
         sp = DummySpecies.from_str("X")
         assert sp.oxi_state == 0
         sp = DummySpecies.from_str("X2+")
@@ -549,29 +569,42 @@ class DummySpeciesTestCase(unittest.TestCase):
 
     def test_pickle(self):
         el1 = DummySpecies("X", 3)
-        o = pickle.dumps(el1)
-        assert el1 == pickle.loads(o)
+        pickled = pickle.dumps(el1)
+        assert el1 == pickle.loads(pickled)
 
     def test_sort(self):
-        r = sorted([Element.Fe, DummySpecies("X")])
-        assert r == [DummySpecies("X"), Element.Fe]
+        Fe, X = Element.Fe, DummySpecies("X")
+        assert sorted([Fe, X]) == [X, Fe]
         assert DummySpecies("X", 3) < DummySpecies("X", 4)
 
         sp = Species("Fe", 2, spin=5)
         with pytest.raises(AttributeError) as exc:
             sp.spin = 6
 
+        # for some reason different message on Windows and Mac. on Linux: 'can't set attribute'
         assert "can't set attribute" in str(exc.value) or "property 'spin' of 'Species' object has no setter" in str(
             exc.value
-        )  # 'can't set attribute' on Linux, for some reason different message on Windows and Mac
+        )
         assert sp.spin == 5
 
 
-class TestFunc(unittest.TestCase):
-    def test_get_el_sp(self):
-        assert get_el_sp("Fe2+") == Species("Fe", 2)
-        assert get_el_sp("3") == Element.Li
-        assert get_el_sp("3.0") == Element.Li
-        assert get_el_sp("U") == Element.U
-        assert get_el_sp("X2+") == DummySpecies("X", 2)
-        assert get_el_sp("Mn3+") == Species("Mn", 3)
+def test_get_el_sp():
+    assert get_el_sp("Fe2+") == Species("Fe", 2)
+    assert get_el_sp("3") == Element.Li
+    assert get_el_sp(5) == Element.B
+    assert get_el_sp("3.0") == Element.Li
+    assert get_el_sp("+3.0") == Element.Li
+    assert get_el_sp(2.0) == Element.He
+    assert get_el_sp("U") == Element.U
+    assert get_el_sp("X2+") == DummySpecies("X", 2)
+    assert get_el_sp("Mn3+") == Species("Mn", 3)
+    assert get_el_sp("X2+spin=5") == DummySpecies("X", 2, spin=5)
+
+    with pytest.raises(ValueError, match="Can't parse Element or Species from None"):
+        get_el_sp(None)
+
+
+def test_element_type():
+    assert isinstance(ElementType.actinoid, Enum)
+    assert isinstance(ElementType.metalloid, Enum)
+    assert len(ElementType) == 17

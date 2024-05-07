@@ -10,19 +10,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import cm
+from matplotlib.colors import Normalize
+from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Polygon
 from monty.json import MontyDecoder, MSONable, jsanitize
 
 from pymatgen.analysis.chemenv.coordination_environments.coordination_geometries import AllCoordinationGeometries
 from pymatgen.analysis.chemenv.coordination_environments.voronoi import DetailedVoronoiContainer
 from pymatgen.analysis.chemenv.utils.chemenv_errors import ChemenvError
 from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
-from pymatgen.core.periodic_table import Element, Species
-from pymatgen.core.sites import PeriodicSite
-from pymatgen.core.structure import PeriodicNeighbor, Structure
+from pymatgen.core import Element, PeriodicNeighbor, PeriodicSite, Species, Structure
 
 if TYPE_CHECKING:
-    import matplotlib.pyplot as plt
+    from typing_extensions import Self
 
 __author__ = "David Waroquiers"
 __copyright__ = "Copyright 2012, The Materials Project"
@@ -368,7 +371,7 @@ class StructureEnvironments(MSONable):
             }
 
         @classmethod
-        def from_dict(cls, dct, structure: Structure, detailed_voronoi):
+        def from_dict(cls, dct, structure: Structure, detailed_voronoi) -> Self:
             """
             Reconstructs the NeighborsSet algorithm from its JSON-serializable dict representation, together with
             the structure and the DetailedVoronoiContainer.
@@ -411,7 +414,7 @@ class StructureEnvironments(MSONable):
         Args:
             voronoi: VoronoiContainer object for the structure.
             valences: Valences provided.
-            sites_map: Mapping of equivalent sites to the unequivalent sites that have been computed.
+            sites_map: Mapping of equivalent sites to the nonequivalent sites that have been computed.
             equivalent_sites: List of list of equivalent sites of the structure.
             ce_list: List of chemical environments.
             structure: Structure object.
@@ -459,14 +462,14 @@ class StructureEnvironments(MSONable):
         distance_conditions = []
         for idp, dp_dict in enumerate(site_distance_parameters):
             distance_conditions.append([])
-            for inb, _ in enumerate(site_voronoi):
+            for inb in range(len(site_voronoi)):
                 cond = inb in dp_dict["nb_indices"]
                 distance_conditions[idp].append(cond)
         # Precompute angle conditions
         angle_conditions = []
         for iap, ap_dict in enumerate(site_angle_parameters):
             angle_conditions.append([])
-            for inb, _ in enumerate(site_voronoi):
+            for inb in range(len(site_voronoi)):
                 cond = inb in ap_dict["nb_indices"]
                 angle_conditions[iap].append(cond)
         # Precompute additional conditions
@@ -499,7 +502,7 @@ class StructureEnvironments(MSONable):
                     }
                     site_voronoi_indices = [
                         inb
-                        for inb, voro_nb_dict in enumerate(site_voronoi)
+                        for inb, _voro_nb_dict in enumerate(site_voronoi)
                         if (
                             distance_conditions[idp][inb]
                             and angle_conditions[iap][inb]
@@ -575,8 +578,7 @@ class StructureEnvironments(MSONable):
         self.info["sites_info"][isite].update(info_dict)
 
     def get_coordination_environments(self, isite, cn, nb_set):
-        """
-        Get the ChemicalEnvironments for a given site, coordination and neighbors set.
+        """Get the ChemicalEnvironments for a given site, coordination and neighbors set.
 
         Args:
             isite: Index of the site for which the ChemicalEnvironments is looked for.
@@ -597,8 +599,7 @@ class StructureEnvironments(MSONable):
         return self.ce_list[isite][cn][nb_set_index]
 
     def get_csm(self, isite, mp_symbol):
-        """
-        Get the continuous symmetry measure for a given site in the given coordination environment.
+        """Get the continuous symmetry measure for a given site in the given coordination environment.
 
         Args:
             isite: Index of the site.
@@ -617,8 +618,7 @@ class StructureEnvironments(MSONable):
         return csms[0]
 
     def get_csms(self, isite, mp_symbol) -> list:
-        """
-        Returns the continuous symmetry measure(s) of site with index isite with respect to the
+        """Get the continuous symmetry measure(s) of site with index isite with respect to the
         perfect coordination environment with mp_symbol. For some environments, a given mp_symbol might not
         be available (if there is no voronoi parameters leading to a number of neighbors corresponding to
         the coordination number of environment mp_symbol). For some environments, a given mp_symbol might
@@ -647,11 +647,6 @@ class StructureEnvironments(MSONable):
             isite: Index of the site for which the plot has to be done
             max_csm: Maximum continuous symmetry measure to be shown.
         """
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            print('Plotting Chemical Environments requires matplotlib ... exiting "plot" function')
-            return
         fig = self.get_csm_and_maps(isite=isite, max_csm=max_csm)
         if fig is None:
             return
@@ -675,13 +670,6 @@ class StructureEnvironments(MSONable):
         Returns:
             Matplotlib figure and axes representing the CSM and maps.
         """
-        try:
-            import matplotlib.pyplot as plt
-            from matplotlib.gridspec import GridSpec
-        except ImportError:
-            print('Plotting Chemical Environments requires matplotlib ... exiting "plot" function')
-            return None
-
         if symmetry_measure_type is None:
             symmetry_measure_type = "csm_wcs_ctwcc"
         # Initializes the figure
@@ -828,15 +816,6 @@ class StructureEnvironments(MSONable):
         Returns:
             tuple[plt.Figure, plt.Axes]: matplotlib figure and axes representing the environments.
         """
-        try:
-            import matplotlib.pyplot as plt
-            from matplotlib import cm
-            from matplotlib.colors import Normalize
-            from matplotlib.patches import Polygon
-        except ImportError:
-            print('Plotting Chemical Environments requires matplotlib ... exiting "plot" function')
-            return None
-
         # Initializes the figure
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111)
@@ -1036,8 +1015,7 @@ class StructureEnvironments(MSONable):
         max_dist=2.0,
         figsize=None,
     ):
-        """
-        Saves the environments figure to a given file.
+        """Save the environments figure to a given file.
 
         Args:
             isite: Index of the site for which the plot has to be done.
@@ -1073,19 +1051,14 @@ class StructureEnvironments(MSONable):
         """
         differences = []
         if self.structure != other.structure:
-            differences.append(
+            differences += (
                 {
                     "difference": "structure",
                     "comparison": "__eq__",
                     "self": self.structure,
                     "other": other.structure,
-                }
-            )
-            differences.append(
-                {
-                    "difference": "PREVIOUS DIFFERENCE IS DISMISSIVE",
-                    "comparison": "differences_wrt",
-                }
+                },
+                {"difference": "PREVIOUS DIFFERENCE IS DISMISSIVE", "comparison": "differences_wrt"},
             )
             return differences
         if self.valences != other.valences:
@@ -1108,36 +1081,20 @@ class StructureEnvironments(MSONable):
             )
         if self.voronoi != other.voronoi:
             if self.voronoi.is_close_to(other.voronoi):
-                differences.append(
-                    {
-                        "difference": "voronoi",
-                        "comparison": "__eq__",
-                        "self": self.voronoi,
-                        "other": other.voronoi,
-                    }
-                )
-                differences.append(
-                    {
-                        "difference": "PREVIOUS DIFFERENCE IS DISMISSIVE",
-                        "comparison": "differences_wrt",
-                    }
+                differences += (
+                    {"difference": "voronoi", "comparison": "__eq__", "self": self.voronoi, "other": other.voronoi},
+                    {"difference": "PREVIOUS DIFFERENCE IS DISMISSIVE", "comparison": "differences_wrt"},
                 )
                 return differences
 
-            differences.append(
+            differences += (
                 {
                     "difference": "voronoi",
                     "comparison": "is_close_to",
                     "self": self.voronoi,
                     "other": other.voronoi,
-                }
-            )
-            # TODO: make it possible to have "close" voronoi's
-            differences.append(
-                {
-                    "difference": "PREVIOUS DIFFERENCE IS DISMISSIVE",
-                    "comparison": "differences_wrt",
-                }
+                },
+                {"difference": "PREVIOUS DIFFERENCE IS DISMISSIVE", "comparison": "differences_wrt"},
             )
             return differences
         for isite, self_site_nb_sets in enumerate(self.neighbors_sets):
@@ -1263,7 +1220,7 @@ class StructureEnvironments(MSONable):
             else None
             for site_nbs_sets in self.neighbors_sets
         ]
-        info_dict = {key: val for key, val in self.info.items() if key not in ["sites_info"]}
+        info_dict = {key: val for key, val in self.info.items() if key != "sites_info"}
         info_dict["sites_info"] = [
             {
                 "nb_sets_info": {
@@ -1291,13 +1248,13 @@ class StructureEnvironments(MSONable):
         }
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Reconstructs the StructureEnvironments object from a dict representation of the StructureEnvironments created
         using the as_dict method.
 
         Args:
-            d: dict representation of the StructureEnvironments object.
+            dct: dict representation of the StructureEnvironments object.
 
         Returns:
             StructureEnvironments object.
@@ -1312,10 +1269,10 @@ class StructureEnvironments(MSONable):
                 ]
                 for cn in ce_dict
             }
-            for ce_dict in d["ce_list"]
+            for ce_dict in dct["ce_list"]
         ]
-        voronoi = DetailedVoronoiContainer.from_dict(d["voronoi"])
-        structure = Structure.from_dict(d["structure"])
+        voronoi = DetailedVoronoiContainer.from_dict(dct["voronoi"])
+        structure = Structure.from_dict(dct["structure"])
         neighbors_sets = [
             {
                 int(cn): [
@@ -1326,10 +1283,10 @@ class StructureEnvironments(MSONable):
             }
             if site_nbs_sets_dict is not None
             else None
-            for site_nbs_sets_dict in d["neighbors_sets"]
+            for site_nbs_sets_dict in dct["neighbors_sets"]
         ]
-        info = {key: val for key, val in d["info"].items() if key not in ["sites_info"]}
-        if "sites_info" in d["info"]:
+        info = {key: val for key, val in dct["info"].items() if key != "sites_info"}
+        if "sites_info" in dct["info"]:
             info["sites_info"] = [
                 {
                     "nb_sets_info": {
@@ -1340,13 +1297,13 @@ class StructureEnvironments(MSONable):
                 }
                 if "nb_sets_info" in site_info
                 else {}
-                for site_info in d["info"]["sites_info"]
+                for site_info in dct["info"]["sites_info"]
             ]
         return cls(
             voronoi=voronoi,
-            valences=d["valences"],
-            sites_map=d["sites_map"],
-            equivalent_sites=[[PeriodicSite.from_dict(psd) for psd in psl] for psl in d["equivalent_sites"]],
+            valences=dct["valences"],
+            sites_map=dct["sites_map"],
+            equivalent_sites=[[PeriodicSite.from_dict(psd) for psd in psl] for psl in dct["equivalent_sites"]],
             ce_list=ce_list,
             structure=structure,
             neighbors_sets=neighbors_sets,
@@ -1355,8 +1312,7 @@ class StructureEnvironments(MSONable):
 
 
 class LightStructureEnvironments(MSONable):
-    """
-    Class used to store the chemical environments of a given structure obtained from a given ChemenvStrategy. Currently,
+    """Store the chemical environments of a given structure obtained from a given ChemenvStrategy. Currently,
     only strategies leading to the determination of a unique environment for each site is allowed
     This class does not store all the information contained in the StructureEnvironments object, only the coordination
     environment found.
@@ -1463,7 +1419,7 @@ class LightStructureEnvironments(MSONable):
             }
 
         @classmethod
-        def from_dict(cls, dct, structure: Structure, all_nbs_sites):
+        def from_dict(cls, dct, structure: Structure, all_nbs_sites) -> Self:
             """
             Reconstructs the NeighborsSet algorithm from its JSON-serializable dict representation, together with
             the structure and all the possible neighbors sites.
@@ -1520,7 +1476,7 @@ class LightStructureEnvironments(MSONable):
         self.valences_origin = valences_origin
 
     @classmethod
-    def from_structure_environments(cls, strategy, structure_environments, valences=None, valences_origin=None):
+    def from_structure_environments(cls, strategy, structure_environments, valences=None, valences_origin=None) -> Self:
         """
         Construct a LightStructureEnvironments object from a strategy and a StructureEnvironments object.
 
@@ -1536,10 +1492,10 @@ class LightStructureEnvironments(MSONable):
         """
         structure = structure_environments.structure
         strategy.set_structure_environments(structure_environments=structure_environments)
-        coordination_environments = [None] * len(structure)
-        neighbors_sets = [None] * len(structure)
-        _all_nbs_sites = []
-        all_nbs_sites = []
+        coordination_environments: list = [None] * len(structure)
+        neighbors_sets: list = [None] * len(structure)
+        _all_nbs_sites: list = []
+        all_nbs_sites: list = []
         if valences is None:
             valences = structure_environments.valences
             if valences_origin is None:
@@ -1547,14 +1503,14 @@ class LightStructureEnvironments(MSONable):
         elif valences_origin is None:
             valences_origin = "user-specified"
 
-        for isite, site in enumerate(structure):
+        for idx, site in enumerate(structure):
             site_ces_and_nbs_list = strategy.get_site_ce_fractions_and_neighbors(site, strategy_info=True)
             if site_ces_and_nbs_list is None:
                 continue
-            coordination_environments[isite] = []
-            neighbors_sets[isite] = []
+            coordination_environments[idx] = []
+            neighbors_sets[idx] = []
             site_ces = []
-            site_nbs_sets = []
+            site_nbs_sets: list = []
             for ce_and_neighbors in site_ces_and_nbs_list:
                 _all_nbs_sites_indices = []
                 # Coordination environment
@@ -1574,7 +1530,7 @@ class LightStructureEnvironments(MSONable):
                 for nb_site_and_index in neighbors:
                     nb_site = nb_site_and_index["site"]
                     try:
-                        nb_allnbs_sites_index = all_nbs_sites.index(nb_site)
+                        n_all_nbs_sites_index = all_nbs_sites.index(nb_site)
                     except ValueError:
                         nb_index_unitcell = nb_site_and_index["index"]
                         diff = nb_site.frac_coords - structure[nb_index_unitcell].frac_coords
@@ -1584,22 +1540,23 @@ class LightStructureEnvironments(MSONable):
                                 "Weird, differences between one site in a periodic image cell is not integer ..."
                             )
                         nb_image_cell = np.array(rounddiff, int)
-                        nb_allnbs_sites_index = len(_all_nbs_sites)
+                        n_all_nbs_sites_index = len(_all_nbs_sites)
                         _all_nbs_sites.append(
                             {"site": nb_site, "index": nb_index_unitcell, "image_cell": nb_image_cell}
                         )
                         all_nbs_sites.append(nb_site)
-                    _all_nbs_sites_indices.append(nb_allnbs_sites_index)
+                    _all_nbs_sites_indices.append(n_all_nbs_sites_index)
 
                 nb_set = cls.NeighborsSet(
                     structure=structure,
-                    isite=isite,
+                    isite=idx,
                     all_nbs_sites=_all_nbs_sites,
                     all_nbs_sites_indices=_all_nbs_sites_indices,
                 )
                 site_nbs_sets.append(nb_set)
-            coordination_environments[isite] = site_ces
-            neighbors_sets[isite] = site_nbs_sets
+            coordination_environments[idx] = site_ces
+            neighbors_sets[idx] = site_nbs_sets
+
         return cls(
             strategy=strategy,
             coordination_environments=coordination_environments,
@@ -1756,8 +1713,7 @@ class LightStructureEnvironments(MSONable):
                 }
 
     def get_site_info_for_specie_ce(self, specie, ce_symbol):
-        """
-        Get list of indices that have the given specie with a given Coordination environment.
+        """Get list of indices that have the given specie with a given Coordination environment.
 
         Args:
             specie: Species to get.
@@ -1785,8 +1741,7 @@ class LightStructureEnvironments(MSONable):
         return {"isites": isites, "fractions": fractions, "csms": csms}
 
     def get_site_info_for_specie_allces(self, specie, min_fraction=0):
-        """
-        Get list of indices that have the given specie.
+        """Get list of indices that have the given specie.
 
         Args:
             specie: Species to get.
@@ -1801,10 +1756,8 @@ class LightStructureEnvironments(MSONable):
         oxi_state = specie.oxi_state
         for isite, site in enumerate(self.structure):
             if (
-                element in [sp.symbol for sp in site.species]
-                and self.valences == "undefined"
-                or oxi_state == self.valences[isite]
-            ):
+                element in [sp.symbol for sp in site.species] and self.valences == "undefined"
+            ) or oxi_state == self.valences[isite]:
                 if self.coordination_environments[isite] is None:
                     continue
                 for ce_dict in self.coordination_environments[isite]:
@@ -1822,8 +1775,7 @@ class LightStructureEnvironments(MSONable):
         return allces
 
     def get_statistics(self, statistics_fields=DEFAULT_STATISTICS_FIELDS, bson_compatible=False):
-        """
-        Get the statistics of environments for this structure.
+        """Get the statistics of environments for this structure.
 
         Args:
             statistics_fields: Which statistics to get.
@@ -1943,8 +1895,7 @@ class LightStructureEnvironments(MSONable):
         return True
 
     def clear_environments(self, conditions=None):
-        """
-        Get the clear environments in the structure.
+        """Get the clear environments in the structure.
 
         Args:
             conditions: Conditions to be checked for an environment to be "clear".
@@ -1977,9 +1928,9 @@ class LightStructureEnvironments(MSONable):
         Returns:
             bool: True if the coordination environment is found for the given atom.
         """
-        for isite, site in enumerate(self.structure):
+        for idx, site in enumerate(self.structure):
             if Element(atom_symbol) in site.species.element_composition and self.site_contains_environment(
-                isite, ce_symbol
+                idx, ce_symbol
             ):
                 return True
         return False
@@ -1999,8 +1950,7 @@ class LightStructureEnvironments(MSONable):
         return self.strategy.uniquely_determines_coordination_environments
 
     def __eq__(self, other: object) -> bool:
-        """
-        Equality method that checks if the LightStructureEnvironments object is equal to another
+        """Equality method that checks if the LightStructureEnvironments object is equal to another
         LightStructureEnvironments object. Two LightStructureEnvironments objects are equal if the strategy used
         is the same, if the structure is the same, if the valences used in the strategies are the same, if the
         coordination environments and the neighbors determined by the strategy are the same.
@@ -2061,22 +2011,21 @@ class LightStructureEnvironments(MSONable):
         }
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Reconstructs the LightStructureEnvironments object from a dict representation of the
         LightStructureEnvironments created using the as_dict method.
 
         Args:
-            d: dict representation of the LightStructureEnvironments object.
+            dct: dict representation of the LightStructureEnvironments object.
 
         Returns:
             LightStructureEnvironments object.
         """
-        dec = MontyDecoder()
-        structure = dec.process_decoded(d["structure"])
+        structure = MontyDecoder().process_decoded(dct["structure"])
         all_nbs_sites = []
-        for nb_site in d["all_nbs_sites"]:
-            periodic_site = dec.process_decoded(nb_site["site"])
+        for nb_site in dct["all_nbs_sites"]:
+            periodic_site = MontyDecoder().process_decoded(nb_site["site"])
             site = PeriodicNeighbor(
                 species=periodic_site.species,
                 coords=periodic_site.frac_coords,
@@ -2099,34 +2048,32 @@ class LightStructureEnvironments(MSONable):
             ]
             if site_nb_sets is not None
             else None
-            for site_nb_sets in d["neighbors_sets"]
+            for site_nb_sets in dct["neighbors_sets"]
         ]
         return cls(
-            strategy=dec.process_decoded(d["strategy"]),
-            coordination_environments=d["coordination_environments"],
+            strategy=MontyDecoder().process_decoded(dct["strategy"]),
+            coordination_environments=dct["coordination_environments"],
             all_nbs_sites=all_nbs_sites,
             neighbors_sets=neighbors_sets,
             structure=structure,
-            valences=d["valences"],
+            valences=dct["valences"],
         )
 
 
 class ChemicalEnvironments(MSONable):
-    """
-    Class used to store all the information about the chemical environment of a given site for a given list of
+    """Store all the information about the chemical environment of a given site for a given list of
     coordinated neighbors (internally called "cn_map").
     """
 
     def __init__(self, coord_geoms=None):
-        """
-        Initializes the ChemicalEnvironments object containing all the information about the chemical
+        """Initialize the ChemicalEnvironments object containing all the information about the chemical
         environment of a given site.
 
         Args:
             coord_geoms: coordination geometries to be added to the chemical environment.
         """
         if coord_geoms is None:
-            self.coord_geoms = {}
+            self.coord_geoms: dict = {}
         else:
             raise NotImplementedError(
                 "Constructor for ChemicalEnvironments with the coord_geoms argument is not yet implemented"
@@ -2136,8 +2083,7 @@ class ChemicalEnvironments(MSONable):
         return self.coord_geoms[mp_symbol]
 
     def __len__(self):
-        """
-        Returns the number of coordination geometries in this ChemicalEnvironments object.
+        """Get the number of coordination geometries in this ChemicalEnvironments object.
 
         Returns:
             Number of coordination geometries in this ChemicalEnvironments object.
@@ -2148,8 +2094,7 @@ class ChemicalEnvironments(MSONable):
         yield from self.coord_geoms.items()
 
     def minimum_geometry(self, symmetry_measure_type=None, max_csm=None):
-        """
-        Returns the geometry with the minimum continuous symmetry measure of this ChemicalEnvironments.
+        """Get the geometry with the minimum continuous symmetry measure of this ChemicalEnvironments.
 
         Returns:
             tuple (symbol, csm) with symbol being the geometry with the minimum continuous symmetry measure and
@@ -2172,8 +2117,7 @@ class ChemicalEnvironments(MSONable):
         return cglist[imin], csmlist[imin]
 
     def minimum_geometries(self, n=None, symmetry_measure_type=None, max_csm=None):
-        """
-        Returns a list of geometries with increasing continuous symmetry measure in this ChemicalEnvironments object.
+        """Get a list of geometries with increasing continuous symmetry measure in this ChemicalEnvironments object.
 
         Args:
             n: Number of geometries to be included in the list.
@@ -2261,16 +2205,12 @@ class ChemicalEnvironments(MSONable):
         }
 
     def __str__(self):
-        """
-        Returns a string representation of the ChemicalEnvironments object.
-
-        Returns:
-            String representation of the ChemicalEnvironments object.
-        """
+        """Get a string representation of the ChemicalEnvironments."""
         out = "Chemical environments object :\n"
         if len(self.coord_geoms) == 0:
             out += " => No coordination in it <=\n"
             return out
+        mp_symbol = ""
         for key in self.coord_geoms:
             mp_symbol = key
             break
@@ -2328,8 +2268,7 @@ class ChemicalEnvironments(MSONable):
         return True
 
     def __eq__(self, other: object) -> bool:
-        """
-        Equality method that checks if the ChemicalEnvironments object is equal to another ChemicalEnvironments.
+        """Equality method that checks if the ChemicalEnvironments object is equal to another ChemicalEnvironments.
         object.
 
         Args:
@@ -2368,8 +2307,7 @@ class ChemicalEnvironments(MSONable):
         return True
 
     def as_dict(self):
-        """
-        Returns a dictionary representation of the ChemicalEnvironments object.
+        """Get a dictionary representation of the ChemicalEnvironments object.
 
         Returns:
             A dictionary representation of the ChemicalEnvironments object.
@@ -2381,44 +2319,44 @@ class ChemicalEnvironments(MSONable):
         }
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Reconstructs the ChemicalEnvironments object from a dict representation of the ChemicalEnvironments created
         using the as_dict method.
 
         Args:
-            d: dict representation of the ChemicalEnvironments object.
+            dct: dict representation of the ChemicalEnvironments object.
 
         Returns:
             ChemicalEnvironments object.
         """
         ce = cls()
-        for cg in d["coord_geoms"]:
-            if d["coord_geoms"][cg]["local2perfect_map"] is None:
+        for cg in dct["coord_geoms"]:
+            if dct["coord_geoms"][cg]["local2perfect_map"] is None:
                 l2p_map = None
             else:
-                l2p_map = {int(key): int(val) for key, val in d["coord_geoms"][cg]["local2perfect_map"].items()}
-            if d["coord_geoms"][cg]["perfect2local_map"] is None:
+                l2p_map = {int(key): int(val) for key, val in dct["coord_geoms"][cg]["local2perfect_map"].items()}
+            if dct["coord_geoms"][cg]["perfect2local_map"] is None:
                 p2l_map = None
             else:
-                p2l_map = {int(key): int(val) for key, val in d["coord_geoms"][cg]["perfect2local_map"].items()}
+                p2l_map = {int(key): int(val) for key, val in dct["coord_geoms"][cg]["perfect2local_map"].items()}
             if (
-                "other_symmetry_measures" in d["coord_geoms"][cg]
-                and d["coord_geoms"][cg]["other_symmetry_measures"] is not None
+                "other_symmetry_measures" in dct["coord_geoms"][cg]
+                and dct["coord_geoms"][cg]["other_symmetry_measures"] is not None
             ):
-                other_csms = d["coord_geoms"][cg]["other_symmetry_measures"]
+                other_csms = dct["coord_geoms"][cg]["other_symmetry_measures"]
             else:
                 other_csms = None
             ce.add_coord_geom(
                 cg,
-                d["coord_geoms"][cg]["symmetry_measure"],
-                d["coord_geoms"][cg]["algo"],
-                permutation=d["coord_geoms"][cg]["permutation"],
+                dct["coord_geoms"][cg]["symmetry_measure"],
+                dct["coord_geoms"][cg]["algo"],
+                permutation=dct["coord_geoms"][cg]["permutation"],
                 local2perfect_map=l2p_map,
                 perfect2local_map=p2l_map,
-                detailed_voronoi_index=d["coord_geoms"][cg]["detailed_voronoi_index"],
+                detailed_voronoi_index=dct["coord_geoms"][cg]["detailed_voronoi_index"],
                 other_symmetry_measures=other_csms,
-                rotation_matrix=d["coord_geoms"][cg]["rotation_matrix"],
-                scaling_factor=d["coord_geoms"][cg]["scaling_factor"],
+                rotation_matrix=dct["coord_geoms"][cg]["rotation_matrix"],
+                scaling_factor=dct["coord_geoms"][cg]["scaling_factor"],
             )
         return ce

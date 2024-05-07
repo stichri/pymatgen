@@ -17,15 +17,16 @@ from pymatgen.analysis.bond_valence import BVAnalyzer
 from pymatgen.analysis.elasticity.strain import Deformation
 from pymatgen.analysis.ewald import EwaldMinimizer, EwaldSummation
 from pymatgen.analysis.structure_matcher import StructureMatcher
-from pymatgen.core.composition import Composition
+from pymatgen.core import Composition, get_el_sp
 from pymatgen.core.operations import SymmOp
-from pymatgen.core.periodic_table import get_el_sp
 from pymatgen.core.structure import Lattice, Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.transformations.site_transformations import PartialRemoveSitesTransformation
 from pymatgen.transformations.transformation_abc import AbstractTransformation
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from pymatgen.core.sites import PeriodicSite
     from pymatgen.util.typing import SpeciesLike
 
@@ -38,7 +39,7 @@ class RotationTransformation(AbstractTransformation):
     def __init__(self, axis, angle, angle_in_radians=False):
         """
         Args:
-            axis (3x1 array): Axis of rotation, e.g., [1, 0, 0]
+            axis (3x1 array): Axis of rotation, e.g. [1, 0, 0]
             angle (float): Angle to rotate
             angle_in_radians (bool): Set to True if angle is supplied in radians.
                 Else degrees are assumed.
@@ -85,7 +86,7 @@ class OxidationStateDecorationTransformation(AbstractTransformation):
         """
         Args:
             oxidation_states (dict): Oxidation states supplied as a dict,
-            e.g., {"Li":1, "O":-2}.
+            e.g. {"Li":1, "O":-2}.
         """
         self.oxidation_states = oxidation_states
 
@@ -182,9 +183,7 @@ class OxidationStateRemovalTransformation(AbstractTransformation):
         Returns:
             Non-oxidation state decorated Structure.
         """
-        struct = structure.copy()
-        struct.remove_oxidation_states()
-        return struct
+        return structure.copy().remove_oxidation_states()
 
     @property
     def inverse(self):
@@ -198,21 +197,21 @@ class OxidationStateRemovalTransformation(AbstractTransformation):
 
 
 class SupercellTransformation(AbstractTransformation):
-    """The SupercellTransformation replicates an unitcell to a supercell."""
+    """The SupercellTransformation replicates a unit cell to a supercell."""
 
     def __init__(self, scaling_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1))):
         """
         Args:
             scaling_matrix: A matrix of transforming the lattice vectors.
-                Defaults to the identity matrix. Has to be all integers. e.g.,
+                Defaults to the identity matrix. Has to be all integers. e.g.
                 [[2,1,0],[0,3,0],[0,0,1]] generates a new structure with
                 lattice vectors a" = 2a + b, b" = 3b, c" = c where a, b, and c
                 are the lattice vectors of the original structure.
         """
         self.scaling_matrix = scaling_matrix
 
-    @staticmethod
-    def from_scaling_factors(scale_a=1, scale_b=1, scale_c=1):
+    @classmethod
+    def from_scaling_factors(cls, scale_a: float = 1, scale_b: float = 1, scale_c: float = 1) -> Self:
         """Convenience method to get a SupercellTransformation from a simple
         series of three numbers for scaling each lattice vector. Equivalent to
         calling the normal with [[scale_a, 0, 0], [0, scale_b, 0],
@@ -226,12 +225,12 @@ class SupercellTransformation(AbstractTransformation):
         Returns:
             SupercellTransformation.
         """
-        return SupercellTransformation([[scale_a, 0, 0], [0, scale_b, 0], [0, 0, scale_c]])
+        return cls([[scale_a, 0, 0], [0, scale_b, 0], [0, 0, scale_c]])
 
-    @staticmethod
+    @classmethod
     def from_boundary_distance(
-        structure: Structure, min_boundary_dist: float = 6, allow_rotation: bool = False, max_atoms: float = -1
-    ) -> SupercellTransformation:
+        cls, structure: Structure, min_boundary_dist: float = 6, allow_rotation: bool = False, max_atoms: float = -1
+    ) -> Self:
         """Get a SupercellTransformation according to the desired minimum distance between periodic
         boundaries of the resulting supercell.
 
@@ -244,7 +243,7 @@ class SupercellTransformation(AbstractTransformation):
                 number of atoms than the SupercellTransformation with unchanged lattice angles
                 can possibly be found. If such a SupercellTransformation cannot be found easily,
                 the SupercellTransformation with unchanged lattice angles will be returned.
-            max_atoms (int): Maximum number of atoms allowed in the supercell. Defaults to infinity.
+            max_atoms (int): Maximum number of atoms allowed in the supercell. Defaults to -1 for infinity.
 
         Returns:
             SupercellTransformation.
@@ -256,21 +255,21 @@ class SupercellTransformation(AbstractTransformation):
         if allow_rotation and sum(min_expand != 0) > 1:
             min1, min2, min3 = map(int, min_expand)  # type: ignore  # map(int) just for mypy's sake
             scaling_matrix = [
-                [min1 if min1 else 1, 1 if min1 and min2 else 0, 1 if min1 and min3 else 0],
-                [-1 if min2 and min1 else 0, min2 if min2 else 1, 1 if min2 and min3 else 0],
-                [-1 if min3 and min1 else 0, -1 if min3 and min2 else 0, min3 if min3 else 1],
+                [min1 or 1, 1 if min1 and min2 else 0, 1 if min1 and min3 else 0],
+                [-1 if min2 and min1 else 0, min2 or 1, 1 if min2 and min3 else 0],
+                [-1 if min3 and min1 else 0, -1 if min3 and min2 else 0, min3 or 1],
             ]
             struct_scaled = structure.make_supercell(scaling_matrix, in_place=False)
             min_expand_scaled = np.int8(
                 min_boundary_dist / np.array([struct_scaled.lattice.d_hkl(plane) for plane in np.eye(3)])
             )
             if sum(min_expand_scaled != 0) == 0 and len(struct_scaled) <= max_atoms:
-                return SupercellTransformation(scaling_matrix)
+                return cls(scaling_matrix)
 
         scaling_matrix = np.eye(3) + np.diag(min_expand)  # type: ignore[assignment]
         struct_scaled = structure.make_supercell(scaling_matrix, in_place=False)
         if len(struct_scaled) <= max_atoms:
-            return SupercellTransformation(scaling_matrix)
+            return cls(scaling_matrix)
 
         msg = f"{max_atoms=} exceeded while trying to solve for supercell. You can try lowering {min_boundary_dist=}"
         if not allow_rotation:
@@ -312,7 +311,7 @@ class SubstitutionTransformation(AbstractTransformation):
         """
         Args:
             species_map: A dict or list of tuples containing the species mapping in
-                string-string pairs. E.g., {"Li": "Na"} or [("Fe2+","Mn2+")].
+                string-string pairs. e.g. {"Li": "Na"} or [("Fe2+","Mn2+")].
                 Multiple substitutions can be done. Overloaded to accept
                 sp_and_occu dictionary E.g. {"Si: {"Ge":0.75, "C":0.25}},
                 which substitutes a single species with multiple species to
@@ -362,7 +361,7 @@ class RemoveSpeciesTransformation(AbstractTransformation):
     def __init__(self, species_to_remove):
         """
         Args:
-            species_to_remove: List of species to remove. E.g., ["Li", "Mn"].
+            species_to_remove: List of species to remove. e.g. ["Li", "Mn"].
         """
         self.species_to_remove = species_to_remove
 
@@ -414,9 +413,9 @@ class PartialRemoveSpecieTransformation(AbstractTransformation):
     def __init__(self, specie_to_remove, fraction_to_remove, algo=ALGO_FAST):
         """
         Args:
-            specie_to_remove: Species to remove. Must have oxidation state E.g.,
+            specie_to_remove: Species to remove. Must have oxidation state e.g.
                 "Li+"
-            fraction_to_remove: Fraction of specie to remove. E.g., 0.5
+            fraction_to_remove: Fraction of specie to remove. e.g. 0.5
             algo: This parameter allows you to choose the algorithm to perform
                 ordering. Use one of PartialRemoveSpecieTransformation.ALGO_*
                 variables to set the algo.
@@ -472,8 +471,8 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
     state decorated for Ewald sum to be computed. No attempt is made to perform
     symmetry determination to reduce the number of combinations.
 
-    Hence, attempting to performing ordering on a large number of disordered
-    sites may be extremely expensive. The time scales approximately with the
+    Hence, attempting to order a large number of disordered sites can be extremely
+    expensive. The time scales approximately with the
     number of possible combinations. The algorithm can currently compute
     approximately 5,000,000 permutations per minute.
 
@@ -487,10 +486,10 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
     these will be treated separately if the difference is above a threshold
     tolerance. currently this is .1
 
-    For example, if a fraction of .25 Li is on sites 0,1,2,3  and .5 on sites
-    4, 5, 6, 7 then 1 site from [0,1,2,3] will be filled and 2 sites from [4,5,6,7]
+    For example, if a fraction of .25 Li is on sites 0, 1, 2, 3  and .5 on sites
+    4, 5, 6, 7 then 1 site from [0, 1, 2, 3] will be filled and 2 sites from [4, 5, 6, 7]
     will be filled, even though a lower energy combination might be found by
-    putting all lithium in sites [4,5,6,7].
+    putting all lithium in sites [4, 5, 6, 7].
 
     USE WITH CARE.
     """
@@ -510,11 +509,11 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
                 ordering.
         """
         self.algo = algo
-        self._all_structures = []
+        self._all_structures: list = []
         self.no_oxi_states = no_oxi_states
         self.symmetrized_structures = symmetrized_structures
 
-    def apply_transformation(self, structure: Structure, return_ranked_list: bool | int = False):
+    def apply_transformation(self, structure: Structure, return_ranked_list: bool | int = False) -> Structure:
         """For this transformation, the apply_transformation method will return
         only the ordered structure with the lowest Ewald energy, to be
         consistent with the method signature of the other transformations.
@@ -524,7 +523,6 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
         Args:
             structure: Oxidation state decorated disordered structure to order
             return_ranked_list (bool | int, optional): If return_ranked_list is int, that number of structures
-
                 is returned. If False, only the single lowest energy structure is returned. Defaults to False.
 
         Returns:
@@ -539,11 +537,11 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
             transmuted structure class.
         """
         try:
-            num_to_return = int(return_ranked_list)
+            n_to_return = int(return_ranked_list)
         except ValueError:
-            num_to_return = 1
+            n_to_return = 1
 
-        num_to_return = max(1, num_to_return)
+        n_to_return = max(1, n_to_return)
 
         if self.no_oxi_states:
             structure = Structure.from_sites(structure)
@@ -604,15 +602,15 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
                 manipulations.append([0, empty, list(group), None])
 
         matrix = EwaldSummation(struct).total_energy_matrix
-        ewald_m = EwaldMinimizer(matrix, manipulations, num_to_return, self.algo)
+        ewald_m = EwaldMinimizer(matrix, manipulations, n_to_return, self.algo)
 
         self._all_structures = []
 
         lowest_energy = ewald_m.output_lists[0][0]
-        num_atoms = sum(structure.composition.values())
+        n_atoms = sum(structure.composition.values())
 
         for output in ewald_m.output_lists:
-            s_copy = struct.copy()
+            struct_copy = struct.copy()
             # do deletions afterwards because they screw up the indices of the
             # structure
             del_indices = []
@@ -620,22 +618,22 @@ class OrderDisorderedStructureTransformation(AbstractTransformation):
                 if manipulation[1] is None:
                     del_indices.append(manipulation[0])
                 else:
-                    s_copy[manipulation[0]] = manipulation[1]
-            s_copy.remove_sites(del_indices)
+                    struct_copy[manipulation[0]] = manipulation[1]
+            struct_copy.remove_sites(del_indices)
 
             if self.no_oxi_states:
-                s_copy.remove_oxidation_states()
+                struct_copy.remove_oxidation_states()
 
             self._all_structures.append(
                 {
                     "energy": output[0],
-                    "energy_above_minimum": (output[0] - lowest_energy) / num_atoms,
-                    "structure": s_copy.get_sorted_structure(),
+                    "energy_above_minimum": (output[0] - lowest_energy) / n_atoms,
+                    "structure": struct_copy.get_sorted_structure(),
                 }
             )
 
         if return_ranked_list:
-            return self._all_structures[:num_to_return]
+            return self._all_structures[:n_to_return]  # type: ignore[return-value]
         return self._all_structures[0]["structure"]
 
     def __repr__(self):
@@ -947,7 +945,7 @@ class ScaleToRelaxedTransformation(AbstractTransformation):
             species_map (dict): A dict or list of tuples containing the species mapping in
                 string-string pairs. The first species corresponds to the relaxed
                 structure while the second corresponds to the species in the
-                structure to be scaled. E.g., {"Li":"Na"} or [("Fe2+","Mn2+")].
+                structure to be scaled. e.g. {"Li":"Na"} or [("Fe2+","Mn2+")].
                 Multiple substitutions can be done. Overloaded to accept
                 sp_and_occu dictionary E.g. {"Si: {"Ge":0.75, "C":0.25}},
                 which substitutes a single species with multiple species to
@@ -970,7 +968,7 @@ class ScaleToRelaxedTransformation(AbstractTransformation):
         """Returns a copy of structure with lattice parameters
         and sites scaled to the same degree as the relaxed_structure.
 
-        Arg:
+        Args:
             structure (Structure): A structurally similar structure in
                 regards to crystal and site positions.
         """
@@ -982,7 +980,9 @@ class ScaleToRelaxedTransformation(AbstractTransformation):
 
         params = list(structure.lattice.abc)
         params.extend(structure.lattice.angles)
-        new_lattice = Lattice.from_parameters(*(p * self.params_percent_change[i] for i, p in enumerate(params)))
+        new_lattice = Lattice.from_parameters(
+            *(param * self.params_percent_change[idx] for idx, param in enumerate(params))
+        )
         species, frac_coords = [], []
         for site in self.relaxed_structure:
             species.append(s_map[site.specie])

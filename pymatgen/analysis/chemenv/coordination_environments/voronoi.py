@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
 import numpy as np
 from monty.json import MSONable
 from scipy.spatial import Voronoi
@@ -19,6 +21,9 @@ from pymatgen.analysis.chemenv.utils.math_utils import normal_cdf_step
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 __author__ = "David Waroquiers"
 __copyright__ = "Copyright 2012, The Materials Project"
 __credits__ = "Geoffroy Hautier"
@@ -28,7 +33,7 @@ __email__ = "david.waroquiers@gmail.com"
 __date__ = "Feb 20, 2016"
 
 
-def from_bson_voronoi_list2(bson_nb_voro_list2, structure):
+def from_bson_voronoi_list2(bson_nb_voro_list2: list[PeriodicSite], structure: Structure):
     """
     Returns the voronoi_list needed for the VoronoiContainer object from a bson-encoded voronoi_list.
 
@@ -40,21 +45,22 @@ def from_bson_voronoi_list2(bson_nb_voro_list2, structure):
         The voronoi_list needed for the VoronoiContainer (with PeriodicSites as keys of the dictionary - not
         allowed in the BSON format).
     """
-    voronoi_list = [None] * len(bson_nb_voro_list2)
-    for isite, voro in enumerate(bson_nb_voro_list2):
-        if voro is None or voro == "None":
+    voronoi_list: list[list[dict] | None] = [None] * len(bson_nb_voro_list2)
+
+    for idx, voro in enumerate(bson_nb_voro_list2):
+        if voro in (None, "None"):
             continue
-        voronoi_list[isite] = []
+
+        voronoi_list[idx] = []
         for psd, dct in voro:
             struct_site = structure[dct["index"]]
-            periodic_site = PeriodicSite(
+            dct["site"] = PeriodicSite(
                 struct_site._species,
                 struct_site.frac_coords + psd[1],
                 struct_site._lattice,
                 properties=struct_site.properties,
             )
-            dct["site"] = periodic_site
-            voronoi_list[isite].append(dct)
+            voronoi_list[idx].append(dct)  # type: ignore[union-attr]
     return voronoi_list
 
 
@@ -121,8 +127,7 @@ class DetailedVoronoiContainer(MSONable):
         logging.debug(f"Neighbors distances and angles set up in {t2 - t1:.2f} seconds")
 
     def setup_voronoi_list(self, indices, voronoi_cutoff):
-        """
-        Set up of the voronoi list of neighbors by calling qhull.
+        """Set up of the voronoi list of neighbors by calling qhull.
 
         Args:
             indices: indices of the sites for which the Voronoi is needed.
@@ -140,8 +145,8 @@ class DetailedVoronoiContainer(MSONable):
             logging.debug("Please consider increasing voronoi_distance_cutoff")
         t1 = time.process_time()
         logging.debug("Setting up Voronoi list :")
-        for jj, isite in enumerate(indices):
-            logging.debug(f"  - Voronoi analysis for site #{isite} ({jj + 1}/{len(indices)})")
+        for jj, isite in enumerate(indices, start=1):
+            logging.debug(f"  - Voronoi analysis for site #{isite} ({jj}/{len(indices)})")
             site = self.structure[isite]
             neighbors1 = [(site, 0.0, isite)]
             neighbors1.extend(struct_neighbors[isite])
@@ -189,8 +194,7 @@ class DetailedVoronoiContainer(MSONable):
         logging.debug(f"Voronoi list set up in {t2 - t1:.2f} seconds")
 
     def setup_neighbors_distances_and_angles(self, indices):
-        """
-        Initializes the angle and distance separations.
+        """Initialize the angle and distance separations.
 
         Args:
             indices: Indices of the sites for which the Voronoi is needed.
@@ -405,8 +409,7 @@ class DetailedVoronoiContainer(MSONable):
     #     return {'i_distfactor': idist, 'i_angfactor': iang, 'i_additional_condition': i_additional_condition}
 
     def neighbors_surfaces(self, isite, surface_calculation_type=None, max_dist=2.0):
-        """
-        Get the different surfaces corresponding to the different distance-angle cutoffs for a given site.
+        """Get the different surfaces corresponding to the different distance-angle cutoffs for a given site.
 
         Args:
             isite: Index of the site
@@ -421,7 +424,7 @@ class DetailedVoronoiContainer(MSONable):
         bounds_and_limits = self.voronoi_parameters_bounds_and_limits(isite, surface_calculation_type, max_dist)
         distance_bounds = bounds_and_limits["distance_bounds"]
         angle_bounds = bounds_and_limits["angle_bounds"]
-        surfaces = np.zeros((len(distance_bounds), len(angle_bounds)), np.float_)
+        surfaces = np.zeros((len(distance_bounds), len(angle_bounds)), float)
         for idp in range(len(distance_bounds) - 1):
             this_dist_plateau = distance_bounds[idp + 1] - distance_bounds[idp]
             for iap in range(len(angle_bounds) - 1):
@@ -430,8 +433,7 @@ class DetailedVoronoiContainer(MSONable):
         return surfaces
 
     def neighbors_surfaces_bounded(self, isite, surface_calculation_options=None):
-        """
-        Get the different surfaces (using boundaries) corresponding to the different distance-angle cutoffs
+        """Get the different surfaces (using boundaries) corresponding to the different distance-angle cutoffs
         for a given site.
 
         Args:
@@ -478,14 +480,14 @@ class DetailedVoronoiContainer(MSONable):
 
         f_lower = lower_and_upper_functions["lower"]
         f_upper = lower_and_upper_functions["upper"]
-        surfaces = np.zeros((len(distance_bounds), len(angle_bounds)), np.float_)
+        surfaces = np.zeros((len(distance_bounds), len(angle_bounds)), float)
         for idp in range(len(distance_bounds) - 1):
             dp1 = distance_bounds[idp]
             dp2 = distance_bounds[idp + 1]
             if dp2 < mindist or dp1 > maxdist:
                 continue
-            d1 = mindist if dp1 < mindist else dp1
-            d2 = maxdist if dp2 > maxdist else dp2
+            d1 = max(dp1, mindist)
+            d2 = min(dp2, maxdist)
             for iap in range(len(angle_bounds) - 1):
                 ap1 = angle_bounds[iap]
                 ap2 = angle_bounds[iap + 1]
@@ -494,7 +496,7 @@ class DetailedVoronoiContainer(MSONable):
                     ap2 = angle_bounds[iap]
                 if ap2 < minang or ap1 > maxang:
                     continue
-                intersection, interror = rectangle_surface_intersection(
+                intersection, _interror = rectangle_surface_intersection(
                     rectangle=((d1, d2), (ap1, ap2)),
                     f_lower=f_lower,
                     f_upper=f_upper,
@@ -536,8 +538,7 @@ class DetailedVoronoiContainer(MSONable):
         max_dist=2.0,
         additional_conditions=None,
     ):
-        """
-        Get the different surfaces and their cn_map corresponding to the different distance-angle cutoffs
+        """Get the different surfaces and their cn_map corresponding to the different distance-angle cutoffs
         for a given site.
 
         Args:
@@ -559,7 +560,7 @@ class DetailedVoronoiContainer(MSONable):
             max_dist=max_dist,
         )
         maps_and_surfaces = []
-        for cn, value in self._unique_coordinated_neighbors_parameters_indices[isite].items():  # pylint: disable=E1101
+        for cn, value in self._unique_coordinated_neighbors_parameters_indices[isite].items():
             for imap, list_parameters_indices in enumerate(value):
                 thissurf = 0.0
                 for idp, iap, iacb in list_parameters_indices:
@@ -575,8 +576,7 @@ class DetailedVoronoiContainer(MSONable):
         return maps_and_surfaces
 
     def maps_and_surfaces_bounded(self, isite, surface_calculation_options=None, additional_conditions=None):
-        """
-        Get the different surfaces (using boundaries) and their cn_map corresponding to the different
+        """Get the different surfaces (using boundaries) and their cn_map corresponding to the different
         distance-angle cutoffs for a given site.
 
         Args:
@@ -593,7 +593,7 @@ class DetailedVoronoiContainer(MSONable):
             additional_conditions = [self.AC.ONLY_ACB]
         surfaces = self.neighbors_surfaces_bounded(isite=isite, surface_calculation_options=surface_calculation_options)
         maps_and_surfaces = []
-        for cn, value in self._unique_coordinated_neighbors_parameters_indices[isite].items():  # pylint: disable=E1101
+        for cn, value in self._unique_coordinated_neighbors_parameters_indices[isite].items():
             for imap, list_parameters_indices in enumerate(value):
                 thissurf = 0.0
                 for idp, iap, iacb in list_parameters_indices:
@@ -609,8 +609,7 @@ class DetailedVoronoiContainer(MSONable):
         return maps_and_surfaces
 
     def neighbors(self, isite, distfactor, angfactor, additional_condition=None):
-        """
-        Get the neighbors of a given site corresponding to a given distance and angle factor.
+        """Get the neighbors of a given site corresponding to a given distance and angle factor.
 
         Args:
             isite: Index of the site.
@@ -645,8 +644,7 @@ class DetailedVoronoiContainer(MSONable):
         ]
 
     def voronoi_parameters_bounds_and_limits(self, isite, plot_type, max_dist):
-        """
-        Get the different boundaries and limits of the distance and angle factors for the given site.
+        """Get the different boundaries and limits of the distance and angle factors for the given site.
 
         Args:
             isite: Index of the site.
@@ -777,8 +775,7 @@ class DetailedVoronoiContainer(MSONable):
         return True
 
     def get_rdf_figure(self, isite, normalized=True, figsize=None, step_function=None):
-        """
-        Get the Radial Distribution Figure for a given site.
+        """Get the Radial Distribution Figure for a given site.
 
         Args:
             isite: Index of the site.
@@ -792,8 +789,6 @@ class DetailedVoronoiContainer(MSONable):
 
         def dp_func(dp):
             return 1.0 - 1.0 / np.power(dp, 3.0)
-
-        import matplotlib.pyplot as plt
 
         if step_function is None:
             step_function = {"type": "normal_cdf", "scale": 0.0001}
@@ -810,10 +805,8 @@ class DetailedVoronoiContainer(MSONable):
             xx = [0.0]
             yy = [0.0]
             for idist, dist in enumerate(sorted_dists):
-                xx.append(dist)
-                xx.append(dist)
-                yy.append(yy[-1])
-                yy.append(yy[-1] + dnb_dists[idist])
+                xx.extend((dist, dist))
+                yy.extend((yy[-1], yy[-1] + dnb_dists[idist]))
             xx.append(1.1 * xx[-1])
             yy.append(yy[-1])
         elif step_function["type"] == "normal_cdf":
@@ -831,8 +824,7 @@ class DetailedVoronoiContainer(MSONable):
         return fig
 
     def get_sadf_figure(self, isite, normalized=True, figsize=None, step_function=None):
-        """
-        Get the Solid Angle Distribution Figure for a given site.
+        """Get the Solid Angle Distribution Figure for a given site.
 
         Args:
             isite: Index of the site.
@@ -846,8 +838,6 @@ class DetailedVoronoiContainer(MSONable):
 
         def ap_func(ap):
             return np.power(ap, -0.1)
-
-        import matplotlib.pyplot as plt
 
         if step_function is None:
             step_function = {"type": "step_function", "scale": 0.0001}
@@ -864,10 +854,8 @@ class DetailedVoronoiContainer(MSONable):
             xx = [0.0]
             yy = [0.0]
             for iang, ang in enumerate(sorted_angs):
-                xx.append(ang)
-                xx.append(ang)
-                yy.append(yy[-1])
-                yy.append(yy[-1] + dnb_angs[iang])
+                xx.extend((ang, ang))
+                yy.extend((yy[-1], yy[-1] + dnb_angs[iang]))
             xx.append(1.1 * xx[-1])
             yy.append(yy[-1])
         elif step_function["type"] == "normal_cdf":
@@ -915,7 +903,7 @@ class DetailedVoronoiContainer(MSONable):
             #  'index': myindex}
             for nb_dict in voro:
                 site = nb_dict["site"]
-                site_dict = {key: val for key, val in nb_dict.items() if key not in ["site"]}
+                site_dict = {key: val for key, val in nb_dict.items() if key != "site"}
                 # site_voro.append([ps.as_dict(), dd]) [float(c) for c in self.frac_coords]
                 diff = site.frac_coords - self.structure[nb_dict["index"]].frac_coords
                 site_voro.append([[nb_dict["index"], [float(c) for c in diff]], site_dict])
@@ -945,7 +933,7 @@ class DetailedVoronoiContainer(MSONable):
         }
 
     @classmethod
-    def from_dict(cls, dct):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Reconstructs the VoronoiContainer object from a dict representation of the VoronoiContainer created using
         the as_dict method.
@@ -960,6 +948,7 @@ class DetailedVoronoiContainer(MSONable):
         voronoi_list2 = from_bson_voronoi_list2(dct["bson_nb_voro_list2"], structure)
         maximum_distance_factor = dct.get("maximum_distance_factor")
         minimum_angle_factor = dct.get("minimum_angle_factor")
+
         return cls(
             structure=structure,
             voronoi_list2=voronoi_list2,

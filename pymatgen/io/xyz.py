@@ -6,9 +6,8 @@ from __future__ import annotations
 
 import re
 from io import StringIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-import numpy as np
 import pandas as pd
 import numpy as np
 from monty.io import zopen
@@ -21,6 +20,9 @@ from typing import Dict, List, Tuple, Union, Any
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from pathlib import Path
+
+    from typing_extensions import Self
 
 
 class XYZ:
@@ -41,13 +43,12 @@ class XYZ:
             mol (Molecule | Structure): Input molecule or structure or list thereof.
             coord_precision: Precision to be used for coordinates.
         """
-        self._mols = [mol] if isinstance(mol, SiteCollection) else mol
+        self._mols = cast(list[SiteCollection], [mol] if isinstance(mol, SiteCollection) else mol)
         self.precision = coord_precision
 
     @property
     def molecule(self) -> Molecule:
-        """
-        Returns molecule associated with this XYZ. In case of multi-frame
+        """Get molecule associated with this XYZ. In case of multi-frame
         XYZ, returns the last frame.
         """
         return self._mols[-1]  # type: ignore[return-value]
@@ -58,32 +59,26 @@ class XYZ:
         return self._mols  # type: ignore[return-value]
 
     @staticmethod
-    def _from_frame_string(contents) -> Molecule:
+    def _from_frame_str(contents) -> Molecule:
         """Convert a single frame XYZ string to a molecule."""
         lines = contents.split("\n")
-        num_sites = int(lines[0])
+        n_sites = int(lines[0])
         coords = []
         sp = []
         coord_pattern = re.compile(r"(\w+)\s+([0-9\-\+\.*^eEdD]+)\s+([0-9\-\+\.*^eEdD]+)\s+([0-9\-\+\.*^eEdD]+)")
-        for i in range(2, 2 + num_sites):
-            m = coord_pattern.search(lines[i])
-            if m:
-                sp.append(m.group(1))  # this is 1-indexed
+        for idx in range(2, 2 + n_sites):
+            if match := coord_pattern.search(lines[idx]):
+                sp.append(match.group(1))  # this is 1-indexed
                 # this is 0-indexed
                 # in case of 0.0D+00 or 0.00d+01 old double precision writing
                 # replace d or D by e for ten power exponent,
                 # and some files use *^ convention in place of e
-                xyz = [val.lower().replace("d", "e").replace("*^", "e") for val in m.groups()[1:4]]
+                xyz = [val.lower().replace("d", "e").replace("*^", "e") for val in match.groups()[1:4]]
                 coords.append([float(val) for val in xyz])
         return Molecule(sp, coords)
 
     @classmethod
-    @np.deprecate(message="Use from_str instead")
-    def from_string(cls, *args, **kwargs):
-        return cls.from_str(*args, **kwargs)
-
-    @staticmethod
-    def from_str(contents) -> XYZ:
+    def from_str(cls, contents: str) -> Self:
         """
         Creates XYZ object from a string.
 
@@ -104,11 +99,11 @@ class XYZ:
         mols = []
         for xyz_match in pat.finditer(contents):
             xyz_text = xyz_match.group(0)
-            mols.append(XYZ._from_frame_string(xyz_text))
-        return XYZ(mols)
+            mols.append(XYZ._from_frame_str(xyz_text))
+        return cls(mols)
 
-    @staticmethod
-    def from_file(filename) -> XYZ:
+    @classmethod
+    def from_file(cls, filename: str | Path) -> Self:
         """
         Creates XYZ object from a file.
 
@@ -118,12 +113,11 @@ class XYZ:
         Returns:
             XYZ object
         """
-        with zopen(filename, "rt") as f:
-            return XYZ.from_str(f.read())
+        with zopen(filename, mode="rt") as file:
+            return cls.from_str(file.read())
 
     def as_dataframe(self):
-        """
-        Generates a coordinates data frame with columns: atom, x, y, and z
+        """Generate a coordinates data frame with columns: atom, x, y, and z
         In case of multiple frame XYZ, returns the last frame.
 
         Returns:
@@ -138,7 +132,7 @@ class XYZ:
         return df_xyz
 
     def _frame_str(self, frame_mol):
-        output = [str(len(frame_mol)), frame_mol.composition.formula]
+        output = [str(len(frame_mol)), frame_mol.formula]
         prec = self.precision
         fmt = f"{{}} {{:.{prec}f}} {{:.{prec}f}} {{:.{prec}f}}"
         for site in frame_mol:
@@ -155,8 +149,8 @@ class XYZ:
         Args:
             filename (str): File name of output file.
         """
-        with zopen(filename, "wt") as f:
-            f.write(str(self))
+        with zopen(filename, "wt") as file:
+            file.write(str(self))
 
 
 

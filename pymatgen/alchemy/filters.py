@@ -9,14 +9,16 @@ from typing import TYPE_CHECKING
 from monty.json import MSONable
 
 from pymatgen.analysis.structure_matcher import ElementComparator, StructureMatcher
-from pymatgen.core.periodic_table import get_el_sp
+from pymatgen.core import get_el_sp
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from pymatgen.core import Structure
 
 
-class AbstractStructureFilter(MSONable, metaclass=abc.ABCMeta):
+class AbstractStructureFilter(MSONable, abc.ABC):
     """AbstractStructureFilter that defines an API to perform testing of
     Structures. Structures that return True to a test are retained during
     transmutation while those that return False are removed.
@@ -30,8 +32,8 @@ class AbstractStructureFilter(MSONable, metaclass=abc.ABCMeta):
             structure (Structure): Input structure to test
 
         Returns:
-            (bool) Structures that return true are kept in the Transmuter
-            object during filtering.
+            bool: Structures that return true are kept in the Transmuter
+                object during filtering.
         """
         return
 
@@ -75,7 +77,7 @@ class ContainsSpecieFilter(AbstractStructureFilter):
         if self._AND and filter_set <= structure_set:
             # return true if we aren't excluding since all are in structure
             return not self._exclude
-        if (not self._AND) and filter_set & structure_set:
+        if not self._AND and filter_set & structure_set:
             # return true if we aren't excluding since one is in structure
             return not self._exclude
         # return false if we aren't excluding otherwise
@@ -92,7 +94,7 @@ class ContainsSpecieFilter(AbstractStructureFilter):
             ]
         )
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
         """Returns: MSONable dict."""
         return {
             "@module": type(self).__module__,
@@ -106,7 +108,7 @@ class ContainsSpecieFilter(AbstractStructureFilter):
         }
 
     @classmethod
-    def from_dict(cls, dct):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Args:
             dct (dict): Dict representation.
@@ -149,9 +151,9 @@ class SpecieProximityFilter(AbstractStructureFilter):
             sp_to_test = species.intersection(all_species)
             if sp_to_test:
                 max_r = max(self.specie_and_min_dist[sp] for sp in sp_to_test)
-                nn = structure.get_neighbors(site, max_r)
+                neighbors = structure.get_neighbors(site, max_r)
                 for sp in sp_to_test:
-                    for nn_site, dist, *_ in nn:
+                    for nn_site, dist, *_ in neighbors:
                         if sp in nn_site.species and dist < self.specie_and_min_dist[sp]:
                             return False
         return True
@@ -165,7 +167,7 @@ class SpecieProximityFilter(AbstractStructureFilter):
         }
 
     @classmethod
-    def from_dict(cls, dct):
+    def from_dict(cls, dct: dict) -> Self:
         """
         Args:
             dct (dict): Dict representation.
@@ -242,7 +244,7 @@ class RemoveExistingFilter(AbstractStructureFilter):
                 structure matcher is used. A recommended value is 1e-5.
         """
         self.symprec = symprec
-        self.structure_list = []
+        self.structure_list: list = []
         self.existing_structures = existing_structures
         if isinstance(structure_matcher, dict):
             self.structure_matcher = StructureMatcher.from_dict(structure_matcher)
@@ -265,9 +267,11 @@ class RemoveExistingFilter(AbstractStructureFilter):
 
         for s in self.existing_structures:
             if (
-                self.structure_matcher._comparator.get_hash(structure.composition)
-                == self.structure_matcher._comparator.get_hash(s.composition)
-                and self.symprec is None
+                (
+                    self.structure_matcher._comparator.get_hash(structure.composition)
+                    == self.structure_matcher._comparator.get_hash(s.composition)
+                    and self.symprec is None
+                )
                 or get_sg(s) == get_sg(structure)
             ) and self.structure_matcher.fit(s, structure):
                 return False
@@ -339,9 +343,8 @@ class SpeciesMaxDistFilter(AbstractStructureFilter):
         """
         sp1_indices = [idx for idx, site in enumerate(structure) if site.specie == self.sp1]
         sp2_indices = [idx for idx, site in enumerate(structure) if site.specie == self.sp2]
-        fcoords = structure.frac_coords
-        fcoords1 = fcoords[sp1_indices, :]
-        fcoords2 = fcoords[sp2_indices, :]
+        frac_coords1 = structure.frac_coords[sp1_indices, :]
+        frac_coords2 = structure.frac_coords[sp2_indices, :]
         lattice = structure.lattice
-        dists = lattice.get_all_distances(fcoords1, fcoords2)
+        dists = lattice.get_all_distances(frac_coords1, frac_coords2)
         return all(any(row) for row in dists < self.max_dist)

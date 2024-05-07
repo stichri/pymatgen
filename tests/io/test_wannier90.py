@@ -10,10 +10,10 @@ from pytest import approx
 from pymatgen.io.wannier90 import Unk
 from pymatgen.util.testing import TEST_FILES_DIR, PymatgenTest
 
+TEST_DIR = f"{TEST_FILES_DIR}/io/wannier90"
+
 
 class TestUnk(PymatgenTest):
-    _multiprocess_shared_ = True
-
     def setUp(self):
         self.data_std = np.random.rand(10, 5, 5, 5)
         self.unk_std = Unk(1, self.data_std)
@@ -67,7 +67,7 @@ class TestUnk(PymatgenTest):
             Unk(1, data_bad_ncl)
 
     def test_from_file(self):
-        unk = Unk.from_file(f"{TEST_FILES_DIR}/UNK.std")
+        unk = Unk.from_file(f"{TEST_DIR}/UNK.std")
         assert unk.ik == 1
         assert unk.nbnd == 5
         assert unk.ng[0] == 6
@@ -76,7 +76,7 @@ class TestUnk(PymatgenTest):
         assert not unk.is_noncollinear
         assert_allclose(unk.data.shape, (5, 6, 6, 8))
 
-        unk = Unk.from_file(f"{TEST_FILES_DIR}/UNK.ncl")
+        unk = Unk.from_file(f"{TEST_DIR}/UNK.ncl")
         assert unk.ik == 1
         assert unk.nbnd == 5
         assert unk.ng[0] == 6
@@ -97,12 +97,12 @@ class TestUnk(PymatgenTest):
         assert self.unk_ncl == temp_unk
 
     def test_read_write(self):
-        unk0 = Unk.from_file(f"{TEST_FILES_DIR}/UNK.std")
+        unk0 = Unk.from_file(f"{TEST_DIR}/UNK.std")
         unk0.write_file("UNK00001.1")
         unk1 = Unk.from_file("UNK00001.1")
         assert unk0 == unk1
 
-        unk0 = Unk.from_file(f"{TEST_FILES_DIR}/UNK.ncl")
+        unk0 = Unk.from_file(f"{TEST_DIR}/UNK.ncl")
         unk0.write_file("UNK00001.NC")
         unk1 = Unk.from_file("UNK00001.NC")
         assert unk0 == unk1
